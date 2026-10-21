@@ -1,0 +1,23 @@
+- generic: 
+- generic: Business Statement
+- generic: M2 SYNTHETIC • M2 synthetic STANDARD • admin
+- generic: ONLINE
+- generic: Access Denied
+- generic: Business Statements contain sensitive financial information and are currently restricted to the Owner.
+- button "Go Back":
+  - generic: Go Back
+- button "Home":
+  - generic: 
+  - generic: Home
+- button "Product":
+  - generic: 
+  - generic: Product
+- button "SELL":
+  - generic: 
+  - generic: SELL
+- button "Stores":
+  - generic: 
+  - generic: Stores
+- button "More":
+  - generic: 
+  - generic: More

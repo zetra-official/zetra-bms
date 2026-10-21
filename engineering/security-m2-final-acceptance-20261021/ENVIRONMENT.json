@@ -1,0 +1,12 @@
+{
+  "status": "PASS",
+  "auth": "Real GoTrue v2.197.0",
+  "api": "Real PostgREST v16.4",
+  "database": "Cloned hardened disposable PostgreSQL",
+  "signedSyntheticAccounts": 8,
+  "financialHost": "loopback only",
+  "hostedWrites": false,
+  "physicalAndroidAuthenticated": "NOT VERIFIED",
+  "physicalIphone": "NOT TESTED",
+  "stackStoppedAfterAcceptance": true
+}

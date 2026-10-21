@@ -1,0 +1,35 @@
+- generic: Z
+- generic: ZETRA BMS
+- generic: Business Management System
+- generic: 
+- generic: Home
+- generic: 
+- generic: POS / Sell
+- generic: 
+- generic: More
+- generic: 
+- generic: M2 SYNTHETIC
+- generic: CASHIER
+- generic: 
+- generic: 
+- generic: CURRENT WORKSPACE
+- generic: M2 SYNTHETIC
+- generic: CASHIER
+- generic: Organization
+- generic: M2 SYNTHETIC
+- generic: Role
+- generic: cashier
+- generic: Active Store
+- generic: M2 synthetic STANDARD
+- generic: live context
+- generic: 
+- generic: Switch Org / Workspace
+- generic: Cashier Workspace (depends on active org/workspace)
+- generic: Organization:M2 SYNTHETIC
+- generic: Role:cashier
+- generic: Active Store:M2 synthetic STANDARD
+- generic: Pending Cashier Orders
+- generic: "0"
+- generic: These orders were sent to your cashier queue.
+- generic: Refresh Workspace
+- generic: Open Sales

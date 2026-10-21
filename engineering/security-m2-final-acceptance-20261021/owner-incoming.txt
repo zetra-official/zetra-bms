@@ -1,0 +1,37 @@
+- generic: ‹ Back
+- generic: Active Store:M2 synthetic STANDARD
+- generic: STANDARD STORE
+- generic: Incoming Stock
+- generic: Track goods in transit before they enter inventory.
+- generic: Orders
+- generic: "2"
+- generic: Goods Value
+- generic: TSh 204
+- generic: Paid
+- generic: TSh 0
+- generic: Balance
+- generic: TSh 204
+- button "Add Incoming Order":
+  - generic: Add Incoming Order
+- textbox "Search supplier / order / destination"
+- generic: ALL
+- generic: IN_TRANSIT
+- generic: PARTIAL_RECEIVED
+- generic: RECEIVED
+- textbox "From date YYYY-MM-DD"
+- textbox "To date YYYY-MM-DD"
+- generic: Export All PDF
+- generic: M2 Supplier
+- generic: M2-CONCURRENT-902 • RECEIVED
+- generic: RECEIVED
+- generic: TSh 102
+- generic: Paid:TSh 0 • Balance:TSh 102
+- generic: "From:—, — • To: —"
+- generic: Expected:No date
+- generic: M2 Supplier
+- generic: M2-ONLY-500 • IN_TRANSIT
+- generic: IN TRANSIT
+- generic: TSh 102
+- generic: Paid:TSh 0 • Balance:TSh 102
+- generic: "From:—, — • To: —"
+- generic: Expected:No date

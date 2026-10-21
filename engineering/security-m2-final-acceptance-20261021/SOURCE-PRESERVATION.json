@@ -1,0 +1,13 @@
+{
+  "checks": {
+    "webSealedArchive": true,
+    "androidSealedArchive": true,
+    "localCopiedSource:app/(tabs)/index.tsx": true,
+    "localCopiedSource:app/(tabs)/settings/business-statement.tsx": true,
+    "localCopiedSource:app/finance/business-debts.tsx": true,
+    "localCopiedSource:app/stocks/inbound.tsx": true,
+    "localCopiedSource:app/stores/supplier-detail.tsx": true
+  },
+  "allPassed": true,
+  "applicationChangesThisContinuation": false
+}

@@ -1,0 +1,43 @@
+{
+  "checks": [
+    {
+      "role": "owner",
+      "passwordLogin": "PASS",
+      "actualRefreshGrant": "PASS",
+      "postRefreshWorkspaceScope": "PASS"
+    },
+    {
+      "role": "admin",
+      "passwordLogin": "PASS",
+      "actualRefreshGrant": "PASS",
+      "postRefreshWorkspaceScope": "PASS"
+    },
+    {
+      "role": "staff",
+      "passwordLogin": "PASS",
+      "actualRefreshGrant": "PASS",
+      "postRefreshWorkspaceScope": "PASS"
+    },
+    {
+      "role": "cashier",
+      "passwordLogin": "PASS",
+      "actualRefreshGrant": "PASS",
+      "postRefreshWorkspaceScope": "PASS"
+    },
+    {
+      "role": "other_org",
+      "passwordLogin": "PASS",
+      "actualRefreshGrant": "PASS",
+      "postRefreshWorkspaceScope": "PASS"
+    },
+    {
+      "role": "no_membership",
+      "passwordLogin": "PASS",
+      "actualRefreshGrant": "PASS",
+      "postRefreshWorkspaceScope": "PASS"
+    }
+  ],
+  "pass": 18,
+  "fail": 0,
+  "localOnly": true
+}

@@ -1,0 +1,21 @@
+{
+  "milestone": "M2 local-only final acceptance",
+  "status": "M2 PARTIAL",
+  "baselineCheckpoint": "761b1f12172ade30246a87f59618f5647ebf2779",
+  "previousPostgresPass": 192,
+  "previousCompatibilityPass": 24,
+  "newAuthenticatedApiPass": 85,
+  "newPosValuationHttpPass": 27,
+  "newSessionPass": 18,
+  "newConfirmedPrivacyFailure": "anonymous and unauthorized meeting message/attachment discovery; public historical documents",
+  "productSourceChangesThisContinuation": false,
+  "protectedFunctionHashesMatched": 71,
+  "productionWrites": false,
+  "stagingWrites": false,
+  "deployment": false,
+  "gitHubPush": false,
+  "m3Implemented": false,
+  "m3Authorized": false,
+  "remainingOwnerDecision": "Approve separately scoped attachment/privacy containment proposal; review device/template limitations",
+  "report": "M2-FINAL-ACCEPTANCE.md"
+}

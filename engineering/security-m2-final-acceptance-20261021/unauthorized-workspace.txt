@@ -1,0 +1,10 @@
+- generic: Referral Code
+- generic: If a Growth Partner helped you, enter their code here. Otherwise, choose Skip.
+- generic: OPTIONAL PARTNER CODE
+- generic: ZGP Code (optional)
+- textbox "e.g. ZGP-42D0D8"
+- generic: A valid code links your account to the Growth Partner who helped you. Skip to continue without a referral.
+- button "Continue":
+  - generic: Continue
+- button "Skip":
+  - generic: Skip

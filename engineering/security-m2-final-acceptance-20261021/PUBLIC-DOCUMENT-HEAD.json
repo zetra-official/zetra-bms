@@ -1,0 +1,42 @@
+[
+  {
+    "objectSha256": "566a65f62494382103fa130d22f606b821f7d1cde26766af06bd16ed73a52be3",
+    "bucket": "club-media",
+    "metadataMime": "application/pdf",
+    "unauthenticatedHead": 200,
+    "responseMime": "application/pdf",
+    "bodyDownloaded": false
+  },
+  {
+    "objectSha256": "b3b36f96ac07c6e0399a6d1328da646cace1f825045609e4dd60fc6b88cffbbe",
+    "bucket": "club-media",
+    "metadataMime": "application/pdf",
+    "unauthenticatedHead": 200,
+    "responseMime": "application/pdf",
+    "bodyDownloaded": false
+  },
+  {
+    "objectSha256": "cb46af7afa3daa162c4b612b67e28003acf585e33df023273154f11273e51075",
+    "bucket": "club-media",
+    "metadataMime": "application/pdf",
+    "unauthenticatedHead": 200,
+    "responseMime": "application/pdf",
+    "bodyDownloaded": false
+  },
+  {
+    "objectSha256": "b6c0624d27a91bf98659d1043018c67dfce2cd1c4efb287281e9de8adaedde84",
+    "bucket": "club-media",
+    "metadataMime": "application/pdf",
+    "unauthenticatedHead": 200,
+    "responseMime": "application/pdf",
+    "bodyDownloaded": false
+  },
+  {
+    "objectSha256": "7f4d4d3422385f325f08ec0e92b5f7cbce4fc635abc5a7f99bb0e79a8d18a8cd",
+    "bucket": "club-media",
+    "metadataMime": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "unauthenticatedHead": 200,
+    "responseMime": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "bodyDownloaded": false
+  }
+]

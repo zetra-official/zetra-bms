@@ -1,0 +1,348 @@
+{
+  "environment": "real local GoTrue + PostgREST + hardened disposable PostgreSQL",
+  "checks": [
+    {
+      "name": "owner genuine signed identity",
+      "status": "PASS"
+    },
+    {
+      "name": "owner operational store scope",
+      "status": "PASS"
+    },
+    {
+      "name": "owner original quantity/selling price preserved",
+      "status": "PASS"
+    },
+    {
+      "name": "owner acquisition-cost visibility",
+      "status": "PASS"
+    },
+    {
+      "name": "owner debt RPC authority",
+      "status": "PASS"
+    },
+    {
+      "name": "owner raw debt RLS",
+      "status": "PASS"
+    },
+    {
+      "name": "owner Owner cost projection",
+      "status": "PASS"
+    },
+    {
+      "name": "owner raw cost column blocked",
+      "status": "PASS"
+    },
+    {
+      "name": "owner get_store_net_profit_v2 owner boundary",
+      "status": "PASS"
+    },
+    {
+      "name": "owner get_product_profit_report_v3 owner boundary",
+      "status": "PASS"
+    },
+    {
+      "name": "owner get_inbound_stock_orders_v1 role filtering",
+      "status": "PASS"
+    },
+    {
+      "name": "owner get_inbound_stock_order_items_v1 role filtering",
+      "status": "PASS"
+    },
+    {
+      "name": "admin genuine signed identity",
+      "status": "PASS"
+    },
+    {
+      "name": "admin operational store scope",
+      "status": "PASS"
+    },
+    {
+      "name": "admin original quantity/selling price preserved",
+      "status": "PASS"
+    },
+    {
+      "name": "admin acquisition-cost visibility",
+      "status": "PASS"
+    },
+    {
+      "name": "admin debt RPC authority",
+      "status": "PASS"
+    },
+    {
+      "name": "admin raw debt RLS",
+      "status": "PASS"
+    },
+    {
+      "name": "admin Owner cost projection",
+      "status": "PASS"
+    },
+    {
+      "name": "admin raw cost column blocked",
+      "status": "PASS"
+    },
+    {
+      "name": "admin get_store_net_profit_v2 owner boundary",
+      "status": "PASS"
+    },
+    {
+      "name": "admin get_product_profit_report_v3 owner boundary",
+      "status": "PASS"
+    },
+    {
+      "name": "admin get_inbound_stock_orders_v1 role filtering",
+      "status": "PASS"
+    },
+    {
+      "name": "admin get_inbound_stock_order_items_v1 role filtering",
+      "status": "PASS"
+    },
+    {
+      "name": "staff genuine signed identity",
+      "status": "PASS"
+    },
+    {
+      "name": "staff operational store scope",
+      "status": "PASS"
+    },
+    {
+      "name": "staff original quantity/selling price preserved",
+      "status": "PASS"
+    },
+    {
+      "name": "staff acquisition-cost visibility",
+      "status": "PASS"
+    },
+    {
+      "name": "staff debt RPC authority",
+      "status": "PASS"
+    },
+    {
+      "name": "staff raw debt RLS",
+      "status": "PASS"
+    },
+    {
+      "name": "staff Owner cost projection",
+      "status": "PASS"
+    },
+    {
+      "name": "staff raw cost column blocked",
+      "status": "PASS"
+    },
+    {
+      "name": "staff get_store_net_profit_v2 owner boundary",
+      "status": "PASS"
+    },
+    {
+      "name": "staff get_product_profit_report_v3 owner boundary",
+      "status": "PASS"
+    },
+    {
+      "name": "staff get_inbound_stock_orders_v1 role filtering",
+      "status": "PASS"
+    },
+    {
+      "name": "staff get_inbound_stock_order_items_v1 role filtering",
+      "status": "PASS"
+    },
+    {
+      "name": "cashier genuine signed identity",
+      "status": "PASS"
+    },
+    {
+      "name": "cashier operational store scope",
+      "status": "PASS"
+    },
+    {
+      "name": "cashier original quantity/selling price preserved",
+      "status": "PASS"
+    },
+    {
+      "name": "cashier acquisition-cost visibility",
+      "status": "PASS"
+    },
+    {
+      "name": "cashier debt RPC authority",
+      "status": "PASS"
+    },
+    {
+      "name": "cashier raw debt RLS",
+      "status": "PASS"
+    },
+    {
+      "name": "cashier Owner cost projection",
+      "status": "PASS"
+    },
+    {
+      "name": "cashier raw cost column blocked",
+      "status": "PASS"
+    },
+    {
+      "name": "cashier get_store_net_profit_v2 owner boundary",
+      "status": "PASS"
+    },
+    {
+      "name": "cashier get_product_profit_report_v3 owner boundary",
+      "status": "PASS"
+    },
+    {
+      "name": "cashier get_inbound_stock_orders_v1 role filtering",
+      "status": "PASS"
+    },
+    {
+      "name": "cashier get_inbound_stock_order_items_v1 role filtering",
+      "status": "PASS"
+    },
+    {
+      "name": "no_membership genuine signed identity",
+      "status": "PASS"
+    },
+    {
+      "name": "no_membership operational store scope",
+      "status": "PASS"
+    },
+    {
+      "name": "no_membership debt RPC authority",
+      "status": "PASS"
+    },
+    {
+      "name": "no_membership raw debt RLS",
+      "status": "PASS"
+    },
+    {
+      "name": "no_membership Owner cost projection",
+      "status": "PASS"
+    },
+    {
+      "name": "no_membership raw cost column blocked",
+      "status": "PASS"
+    },
+    {
+      "name": "no_membership get_store_net_profit_v2 owner boundary",
+      "status": "PASS"
+    },
+    {
+      "name": "no_membership get_product_profit_report_v3 owner boundary",
+      "status": "PASS"
+    },
+    {
+      "name": "other_org genuine signed identity",
+      "status": "PASS"
+    },
+    {
+      "name": "other_org operational store scope",
+      "status": "PASS"
+    },
+    {
+      "name": "other_org debt RPC authority",
+      "status": "PASS"
+    },
+    {
+      "name": "other_org raw debt RLS",
+      "status": "PASS"
+    },
+    {
+      "name": "other_org Owner cost projection",
+      "status": "PASS"
+    },
+    {
+      "name": "other_org raw cost column blocked",
+      "status": "PASS"
+    },
+    {
+      "name": "other_org get_store_net_profit_v2 owner boundary",
+      "status": "PASS"
+    },
+    {
+      "name": "other_org get_product_profit_report_v3 owner boundary",
+      "status": "PASS"
+    },
+    {
+      "name": "unassigned genuine signed identity",
+      "status": "PASS"
+    },
+    {
+      "name": "unassigned operational store scope",
+      "status": "PASS"
+    },
+    {
+      "name": "unassigned debt RPC authority",
+      "status": "PASS"
+    },
+    {
+      "name": "unassigned raw debt RLS",
+      "status": "PASS"
+    },
+    {
+      "name": "unassigned Owner cost projection",
+      "status": "PASS"
+    },
+    {
+      "name": "unassigned raw cost column blocked",
+      "status": "PASS"
+    },
+    {
+      "name": "unassigned get_store_net_profit_v2 owner boundary",
+      "status": "PASS"
+    },
+    {
+      "name": "unassigned get_product_profit_report_v3 owner boundary",
+      "status": "PASS"
+    },
+    {
+      "name": "inactive genuine signed identity",
+      "status": "PASS"
+    },
+    {
+      "name": "inactive operational store scope",
+      "status": "PASS"
+    },
+    {
+      "name": "inactive debt RPC authority",
+      "status": "PASS"
+    },
+    {
+      "name": "inactive raw debt RLS",
+      "status": "PASS"
+    },
+    {
+      "name": "inactive Owner cost projection",
+      "status": "PASS"
+    },
+    {
+      "name": "inactive raw cost column blocked",
+      "status": "PASS"
+    },
+    {
+      "name": "inactive get_store_net_profit_v2 owner boundary",
+      "status": "PASS"
+    },
+    {
+      "name": "inactive get_product_profit_report_v3 owner boundary",
+      "status": "PASS"
+    },
+    {
+      "name": "anonymous rpc/get_business_debts denied",
+      "status": "PASS"
+    },
+    {
+      "name": "anonymous products?select=id,cost_price denied",
+      "status": "PASS"
+    },
+    {
+      "name": "anonymous rpc/get_store_inventory_v2 denied",
+      "status": "PASS"
+    },
+    {
+      "name": "tampered signature rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "Owner cross organization denied",
+      "status": "PASS"
+    }
+  ],
+  "pass": 85,
+  "fail": 0,
+  "hostedWrites": false
+}

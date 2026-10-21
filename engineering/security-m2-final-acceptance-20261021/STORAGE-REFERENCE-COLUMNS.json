@@ -1,0 +1,112 @@
+[
+  {
+    "column_name": "post_image_url",
+    "table_name": "club_orders",
+    "table_schema": "public"
+  },
+  {
+    "column_name": "image_hq_url",
+    "table_name": "club_posts",
+    "table_schema": "public"
+  },
+  {
+    "column_name": "image_url",
+    "table_name": "club_posts",
+    "table_schema": "public"
+  },
+  {
+    "column_name": "avatar_url",
+    "table_name": "club_profiles",
+    "table_schema": "public"
+  },
+  {
+    "column_name": "image_url",
+    "table_name": "club_store_products",
+    "table_schema": "public"
+  },
+  {
+    "column_name": "avatar_url",
+    "table_name": "club_store_profiles",
+    "table_schema": "public"
+  },
+  {
+    "column_name": "avatar_url",
+    "table_name": "customers",
+    "table_schema": "public"
+  },
+  {
+    "column_name": "image_url",
+    "table_name": "global_products",
+    "table_schema": "public"
+  },
+  {
+    "column_name": "attachment_path",
+    "table_name": "meeting_room_messages",
+    "table_schema": "public"
+  },
+  {
+    "column_name": "attachment_url",
+    "table_name": "meeting_room_messages",
+    "table_schema": "public"
+  },
+  {
+    "column_name": "logo_url",
+    "table_name": "organization_profiles",
+    "table_schema": "public"
+  },
+  {
+    "column_name": "image_url",
+    "table_name": "products",
+    "table_schema": "public"
+  },
+  {
+    "column_name": "avatar_url",
+    "table_name": "profiles",
+    "table_schema": "public"
+  },
+  {
+    "column_name": "image_hq_url",
+    "table_name": "public_marketplace_posts_v1",
+    "table_schema": "public"
+  },
+  {
+    "column_name": "image_url",
+    "table_name": "public_marketplace_posts_v1",
+    "table_schema": "public"
+  },
+  {
+    "column_name": "post_image_hq_url",
+    "table_name": "public_marketplace_products_v1",
+    "table_schema": "public"
+  },
+  {
+    "column_name": "post_image_url",
+    "table_name": "public_marketplace_products_v1",
+    "table_schema": "public"
+  },
+  {
+    "column_name": "image_url",
+    "table_name": "public_store_hero_posts",
+    "table_schema": "public"
+  },
+  {
+    "column_name": "post_image_hq_url",
+    "table_name": "public_store_products_with_images",
+    "table_schema": "public"
+  },
+  {
+    "column_name": "post_image_url",
+    "table_name": "public_store_products_with_images",
+    "table_schema": "public"
+  },
+  {
+    "column_name": "post_image_hq_url",
+    "table_name": "public_store_products_with_images_v2",
+    "table_schema": "public"
+  },
+  {
+    "column_name": "post_image_url",
+    "table_name": "public_store_products_with_images_v2",
+    "table_schema": "public"
+  }
+]

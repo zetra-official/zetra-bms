@@ -1,0 +1,12 @@
+[
+  {
+    "matching_meeting_attachments": 2,
+    "mime": "application/pdf",
+    "objects": 4
+  },
+  {
+    "matching_meeting_attachments": 1,
+    "mime": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "objects": 1
+  }
+]

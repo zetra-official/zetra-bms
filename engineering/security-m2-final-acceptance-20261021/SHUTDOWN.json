@@ -1,0 +1,35 @@
+{
+  "localOnly": true,
+  "dataPreserved": true,
+  "unrelatedServersTouched": false,
+  "containers": [
+    {
+      "name": "zetra-m2-authdb",
+      "stopped": true,
+      "deleted": false
+    },
+    {
+      "name": "zetra-m2-auth",
+      "stopped": true,
+      "deleted": false
+    },
+    {
+      "name": "zetra-m2-rest",
+      "stopped": true,
+      "deleted": false
+    }
+  ],
+  "applicationPostgresStopped": true,
+  "testAdbReverseRemoved": false,
+  "gatewayProcessStopped": true,
+  "osListenerInventoryEmpty": true,
+  "verifiedPorts": [
+    63007,
+    55770,
+    55772,
+    55773,
+    55775
+  ],
+  "nativePostmasterPidAbsent": true,
+  "socketProbe": "A 1s probe timed out; not used as proof. OS listener inventory, Docker state and postmaster lifecycle verified instead."
+}

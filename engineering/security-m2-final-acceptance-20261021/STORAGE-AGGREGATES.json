@@ -1,0 +1,42 @@
+[
+  {
+    "bucket_id": "club-media",
+    "mime": "application/pdf",
+    "objects": 4
+  },
+  {
+    "bucket_id": "club-media",
+    "mime": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "objects": 1
+  },
+  {
+    "bucket_id": "club-media",
+    "mime": "image/jpeg",
+    "objects": 163
+  },
+  {
+    "bucket_id": "club-media",
+    "mime": "video/mp4",
+    "objects": 1
+  },
+  {
+    "bucket_id": "organization-logos",
+    "mime": "image/jpeg",
+    "objects": 13
+  },
+  {
+    "bucket_id": "organization-logos",
+    "mime": "image/png",
+    "objects": 11
+  },
+  {
+    "bucket_id": "product-images",
+    "mime": "image/jpeg",
+    "objects": 502
+  },
+  {
+    "bucket_id": "product-images",
+    "mime": "image/png",
+    "objects": 10
+  }
+]

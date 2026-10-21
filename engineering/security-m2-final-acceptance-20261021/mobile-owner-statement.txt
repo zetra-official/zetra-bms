@@ -1,0 +1,158 @@
+- generic: 
+- generic: Business Statement
+- generic: M2 SYNTHETIC • M2 synthetic STANDARD • owner
+- generic: ONLINE
+- button "Display currency":
+  - generic: Currency · TZS ▾
+- generic: Range
+- generic: Month
+- generic: Year
+- generic: Custom
+- button "Refresh Statement":
+  - generic: Refresh Statement
+- generic: Statement Summary (This Month)
+- generic: Period:This Month (10/1/2026, 12:00:00 AM → 10/21/2026, 11:59:59 PM)
+- generic: TOTAL SALES
+- generic: TZS 0
+- generic: COGS
+- generic: TZS 0
+- generic: Cost of Goods Sold
+- generic: GROSS PROFIT
+- generic: TZS 0
+- generic: Sales - COGS
+- generic: TOTAL EXPENSES
+- generic: TZS 0
+- generic: NET PROFIT
+- generic: TZS 0
+- generic: Gross Profit - Expenses
+- generic: PROFIT MARGIN
+- generic: 0.0%
+- generic: EXPENSE RATIO
+- generic: 0.0%
+- generic: AVERAGE SALE VALUE
+- generic: TZS 0
+- generic: STOCK INVESTMENT DIFFERENCE
+- generic: "-TZS 102"
+- generic: Sales - Goods Purchased
+- generic: CUSTOMER OUTSTANDING BALANCE
+- generic: TZS 0
+- generic: Balance / customer credit
+- generic: EXPENSE COUNT
+- generic: "0"
+- generic: SALES COUNT
+- generic: "0"
+- generic: TOTAL QTY SOLD
+- generic: "0"
+- generic: Stock / Goods Purchased
+- generic: TOTAL GOODS PURCHASED
+- generic: TZS 102
+- generic: Goods purchased
+- generic: PURCHASE ORDERS
+- generic: "1"
+- generic: TOTAL ITEMS PURCHASED
+- generic: "2"
+- generic: OUTSTANDING ON PERIOD PURCHASES
+- generic: TZS 102
+- generic: Current unpaid balance on purchases in this period
+- generic: Capital Recovery Statement
+- generic: INCOME
+- generic: TZS 0
+- generic: COST
+- generic: TZS 0
+- generic: ASSET
+- generic: TZS 0
+- generic: NET POSITION
+- generic: + TZS 0
+- generic: Income - Cost
+- generic: RECOVERY RECORDS
+- generic: "0"
+- generic: Sales Payments
+- generic: CASH SALES
+- generic: TZS 0
+- generic: Paid sales before expenses
+- generic: MOBILE SALES
+- generic: TZS 0
+- generic: Paid sales before expenses
+- generic: BANK SALES
+- generic: TZS 0
+- generic: Paid sales before expenses
+- generic: OTHER SALES
+- generic: TZS 0
+- generic: Paid sales before expenses
+- generic: TOTAL SALES PAID
+- generic: TZS 0
+- generic: Cash + Mobile + Bank + Other
+- generic: PERIOD OUTSTANDING CREDIT
+- generic: TZS 0
+- generic: Credit balance from sales in this period
+- generic: Credit Collections
+- generic: CASH COLLECTIONS
+- generic: TZS 0
+- generic: MOBILE COLLECTIONS
+- generic: TZS 0
+- generic: BANK COLLECTIONS
+- generic: TZS 0
+- generic: OTHER COLLECTIONS
+- generic: TZS 0
+- generic: TOTAL CREDIT COLLECTIONS
+- generic: TZS 0
+- generic: 0 payment(s) received
+- generic: GROSS MONEY RECEIVED
+- generic: TZS 0
+- generic: Sales paid + Credit collections
+- generic: Expenses By Payment Channel
+- generic: CASH EXPENSES
+- generic: TZS 0
+- generic: MOBILE EXPENSES
+- generic: TZS 0
+- generic: BANK EXPENSES
+- generic: TZS 0
+- generic: OTHER EXPENSES
+- generic: TZS 0
+- generic: TOTAL EXPENSES
+- generic: TZS 0
+- generic: 0 expense(s)
+- generic: Money In After Expenses
+- generic: CASH IN
+- generic: TZS 0
+- generic: Sales + collections - cash expenses
+- generic: MOBILE IN
+- generic: TZS 0
+- generic: Sales + collections - mobile expenses
+- generic: BANK IN
+- generic: TZS 0
+- generic: Sales + collections - bank expenses
+- generic: OTHER IN
+- generic: TZS 0
+- generic: Sales + collections - other expenses
+- generic: TOTAL MONEY IN
+- generic: TZS 0
+- generic: After expenses by payment channel
+- generic: TOTAL QTY SOLD
+- generic: "0"
+- generic: Statement Actions
+- generic: Statement Ref:BST-M2SYNT-M2SYNT-MONTH-20261001-20261021
+- button "Share Statement PDF":
+  - generic: Share Statement PDF
+- generic: This statement shows sales, expenses, net profit, payment breakdown and outstanding balances for the selected period.
+- generic: Capital Recovery Records
+- generic: No capital recovery records found.
+- generic: Recent Sales In Statement
+- generic: No sales found.
+- generic: Recent Expenses In Statement
+- generic: No expenses found.
+- button "Home":
+  - generic: 
+  - generic: Home
+- button "Product":
+  - generic: 
+  - generic: Product
+- button "SELL":
+  - generic: 
+  - generic: SELL
+- button "Stores":
+  - generic: 
+  - generic: Stores
+- button "More":
+  - generic: 
+  - generic: More

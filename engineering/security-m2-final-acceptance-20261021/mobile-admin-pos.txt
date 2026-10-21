@@ -1,0 +1,39 @@
+- generic: Sales
+- generic: M2 SYNTHETIC • M2 synthetic STANDARD • admin
+- generic: Wed, 21 Oct 2026
+- generic: "ONLINE • Source: LIVE • Last sync: Just now"
+- generic: History
+- button "Proforma Orders":
+  - generic: Proforma Orders
+  - generic: Pending
+  - generic: "0"
+- button "Display currency":
+  - generic: Currency · TZS ▾
+- generic: 0 items • 0 quantity
+- generic: TZS 0
+- generic: Complete Sale
+- generic: Clear
+- textbox "Search name / SKU / category / barcode..."
+- generic: M2 concurrent synthetic
+- generic: SKU:M2-CONCURRENT • M2-CONCURRENT
+- generic: "Stock: 2"
+- generic: Add
+- generic: M2 Synthetic 商品 منتج
+- generic: SKU:M2-SKU • M2-BARCODE
+- generic: "Stock: 10"
+- generic: Add
+- button "Home":
+  - generic: 
+  - generic: Home
+- button "Product":
+  - generic: 
+  - generic: Product
+- button "SELL":
+  - generic: 
+  - generic: SELL
+- button "Stores":
+  - generic: 
+  - generic: Stores
+- button "More":
+  - generic: 
+  - generic: More

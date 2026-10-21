@@ -1,0 +1,67 @@
+- generic: ‹ Back
+- generic: Active Store:M2 synthetic STANDARD
+- generic: STANDARD STORE
+- generic: Incoming Stock
+- generic: Track goods in transit before they enter inventory.
+- generic: Orders
+- generic: "2"
+- generic: Goods Value
+- generic: —
+- generic: Paid
+- generic: —
+- generic: Balance
+- generic: —
+- button "Add Incoming Order" [disabled]:
+  - generic: Add Incoming Order
+- textbox "Search supplier / order / destination"
+- generic: ALL
+- generic: IN_TRANSIT
+- generic: PARTIAL_RECEIVED
+- generic: RECEIVED
+- textbox "From date YYYY-MM-DD"
+- textbox "To date YYYY-MM-DD"
+- generic: Export All PDF
+- generic: M2 Supplier
+- generic: M2-CONCURRENT-902 • RECEIVED
+- generic: RECEIVED
+- generic: —
+- generic: Paid:— • Balance:—
+- generic: "From:—, — • To: —"
+- generic: Expected:No date
+- generic: M2 Supplier
+- generic: M2-ONLY-500 • IN_TRANSIT
+- generic: IN TRANSIT
+- generic: —
+- generic: Paid:— • Balance:—
+- generic: "From:—, — • To: —"
+- generic: Expected:No date
+- dialog:
+  - generic: Incoming Order Detail
+  - generic: M2 Supplier
+  - generic: M2-ONLY-500 • IN_TRANSIT
+  - generic: Goods
+  - generic: —
+  - generic: Paid
+  - generic: —
+  - generic: Balance
+  - generic: —
+  - generic: Items
+  - generic: "1"
+  - generic: From:—, —
+  - generic: To:—
+  - generic: Expected:No date
+  - button "Edit Full Order":
+    - generic: Edit Full Order
+  - generic: Order Items
+  - generic: 1. M2 Synthetic 商品 منتج
+  - generic: "Ordered:2 • Received:0 • Remaining: 2"
+  - generic: Cost:— • Total:—
+  - generic: SKU:M2-SKU • Barcode:M2-BARCODE • Sell:TSh 101
+  - textbox "Qty to receive now": "2"
+  - generic: Edit Item
+  - textbox "Delete reason required for received order"
+  - generic: Export PDF
+  - generic: Receive Partial Qty
+  - generic: Close
+  - generic: Receive Stock
+  - generic: Delete

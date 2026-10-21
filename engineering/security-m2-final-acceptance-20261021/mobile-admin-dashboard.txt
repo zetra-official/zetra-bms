@@ -1,0 +1,53 @@
+- generic: ZETRA BMS
+- generic: Business Command Center
+- button "Dashboard currency":
+  - generic: TZS ▾
+- button "Open Business Profile":
+  - generic: 
+- generic: OCT 21, 2026
+- button "Switch Organization or Workspace":
+  - generic: 
+  - generic: M2 SYNTHETIC
+  - generic: 
+- button " BUSINESS HUB Business Finance  Tap to view sales, expenses and profit View Details → Sales · Expenses · Stock Value":
+  - generic: 
+  - generic: BUSINESS HUB
+  - generic: Business Finance
+  - generic: 
+  - generic: Tap to view sales, expenses and profit
+  - generic: View Details →
+  - generic: Sales · Expenses · Stock Value
+- generic: Quick Access
+- generic: 
+- generic: Stores
+- generic: 
+- generic: Credit
+- generic: 
+- generic: Products
+- generic: 
+- generic: CRM
+- generic: 
+- generic: Expenses
+- generic: 
+- generic: Reports
+- generic: AI
+- generic: ZETRA AI
+- generic: LIVE MONITORING
+- generic: "Stock alert: cheki bidhaa zilizo chini ya kiwango."
+- generic: Ask AI
+- generic: 
+- button "Home":
+  - generic: 
+  - generic: Home
+- button "Product":
+  - generic: 
+  - generic: Product
+- button "SELL":
+  - generic: 
+  - generic: SELL
+- button "Stores":
+  - generic: 
+  - generic: Stores
+- button "More":
+  - generic: 
+  - generic: More

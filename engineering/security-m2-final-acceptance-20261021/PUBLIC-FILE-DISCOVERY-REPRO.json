@@ -1,0 +1,27 @@
+{
+  "status": "CONFIRMED LOCAL PRIVACY FAILURE",
+  "source": "Captured hosted baseline reader, unchanged by M2 financial draft",
+  "environment": "real GoTrue/PostgREST + disposable PostgreSQL",
+  "hostedCustomerMessageCalls": false,
+  "syntheticRecordsOnly": true,
+  "results": [
+    {
+      "actor": "anonymous",
+      "http": 200,
+      "syntheticPrivateMessageAndAttachmentExposed": true
+    },
+    {
+      "actor": "other_org",
+      "http": 200,
+      "syntheticPrivateMessageAndAttachmentExposed": true,
+      "freshRealAuth": true
+    },
+    {
+      "actor": "no_membership",
+      "http": 200,
+      "syntheticPrivateMessageAndAttachmentExposed": true,
+      "freshRealAuth": true
+    }
+  ],
+  "expiredTokenProbeExcluded": true
+}

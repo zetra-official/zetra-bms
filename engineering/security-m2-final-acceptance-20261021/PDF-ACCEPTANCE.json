@@ -1,0 +1,24 @@
+{
+  "status": "PASS_WITH_LIMITS",
+  "template": "unchanged src/proforma/document.ts buildProformaHtml",
+  "syntheticOnly": true,
+  "renderer": "Chrome headless; Poppler PNG visual inspection",
+  "languages": {
+    "ar": {
+      "pdf": "output/pdf/ar.pdf",
+      "pages": 1,
+      "rtl": "PASS",
+      "glyphVisual": "PASS"
+    },
+    "zh": {
+      "pdf": "output/pdf/zh.pdf",
+      "pages": 1,
+      "glyphVisual": "PASS"
+    }
+  },
+  "originalCurrency": "TZS",
+  "originalTotal": "101",
+  "nativeExpoPrintSharing": "NOT TESTED",
+  "otherReceiptReportTemplates": "NOT TESTED",
+  "multiPageConsolidatedReceiving": "OUT OF SCOPE / NOT TESTED"
+}

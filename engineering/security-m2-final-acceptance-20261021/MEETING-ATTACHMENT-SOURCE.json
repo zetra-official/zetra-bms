@@ -1,0 +1,14 @@
+{
+  "function": "get_meeting_room_messages_v7(uuid)",
+  "membershipCheckLines": [
+    "RETURNS TABLE(id uuid, sender_membership_id uuid, sender_user_id uuid, sender_display_name text, message_text text, attachment_url text, attachment_path text, message_type text, media_kind text, file_name text, file_size_bytes bigint, mime_type text, created_at timestamp with time zone, expires_at timestamp with time zone, is_expired boolean, reply_to_message_id uuid, replied_message_text text, love_count integer, like_count integer, fire_count integer, my_love_reacted boolean, my_like_reacted boolean, my_fire_reacted boolean)",
+    "m.sender_membership_id,",
+    "and r.user_id = auth.uid()",
+    "and r.user_id = auth.uid()",
+    "and r.user_id = auth.uid()"
+  ],
+  "uploadSource": "app/(tabs)/settings/meeting-room-detail.tsx:1848",
+  "bucket": "club-media",
+  "urlMethod": "getPublicUrl",
+  "customerContentRead": false
+}

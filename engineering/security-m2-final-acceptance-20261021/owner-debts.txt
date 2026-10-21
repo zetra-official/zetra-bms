@@ -1,0 +1,54 @@
+- generic: Business Debts
+- generic: Track business debts, payments and debt relative to stock value.
+- generic: Total Debt
+- generic: TZS 204
+- generic: Balance
+- generic: TZS 204
+- generic: Stock Value
+- generic: TZS 612
+- generic: Difference
+- generic: TZS 408
+- generic: SAFE
+- generic: "The business is safe: stock value exceeds outstanding debt."
+- button "Add Debt":
+  - generic: Add Debt
+- generic: Debt List
+- generic: ALL
+- generic: "2"
+- generic: OPEN
+- generic: "2"
+- generic: PARTIAL
+- generic: "0"
+- generic: OVERDUE
+- generic: "0"
+- generic: PAID
+- generic: "0"
+- textbox "Search lender, supplier, store, status..."
+- generic: ALL
+- generic: OPEN
+- generic: PARTIAL
+- generic: OVERDUE
+- generic: PAID
+- generic: Highest
+- generic: Newest
+- generic: Overdue
+- generic: Showing2 of2 debts
+- generic: ACTIVE DEBTS
+- generic: M
+- generic: M2 Supplier
+- generic: M2 synthetic STANDARD • No due date
+- generic: OPEN
+- generic: Balance
+- generic: TZS 102
+- generic: Paid0% • Debt:TZS 102 • Paid:TZS 0
+- generic: Tap to expand • Pay / Edit / History ›
+- generic: ACTIVE • 2026-10-21
+- generic: M
+- generic: M2 Supplier
+- generic: M2 synthetic STANDARD • No due date
+- generic: OPEN
+- generic: Balance
+- generic: TZS 102
+- generic: Paid0% • Debt:TZS 102 • Paid:TZS 0
+- generic: Tap to expand • Pay / Edit / History ›
+- generic: ACTIVE • 2026-10-21

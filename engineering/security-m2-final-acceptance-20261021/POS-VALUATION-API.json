@@ -1,0 +1,196 @@
+{
+  "checks": [
+    {
+      "actor": "owner",
+      "rpc": "get_store_sale_items",
+      "http": 200,
+      "status": "PASS",
+      "error": null
+    },
+    {
+      "actor": "owner",
+      "rpc": "get_stock_in_items_v2",
+      "http": 200,
+      "status": "PASS",
+      "error": null
+    },
+    {
+      "actor": "owner",
+      "rpc": "get_stock_on_hand_value_v1",
+      "http": 200,
+      "status": "PASS",
+      "error": null
+    },
+    {
+      "actor": "admin",
+      "rpc": "get_store_sale_items",
+      "http": 200,
+      "status": "PASS",
+      "error": null
+    },
+    {
+      "actor": "admin",
+      "rpc": "get_stock_in_items_v2",
+      "http": 200,
+      "status": "PASS",
+      "error": null
+    },
+    {
+      "actor": "admin",
+      "rpc": "get_stock_on_hand_value_v1",
+      "http": 403,
+      "status": "PASS",
+      "error": null
+    },
+    {
+      "actor": "staff",
+      "rpc": "get_store_sale_items",
+      "http": 200,
+      "status": "PASS",
+      "error": null
+    },
+    {
+      "actor": "staff",
+      "rpc": "get_stock_in_items_v2",
+      "http": 200,
+      "status": "PASS",
+      "error": null
+    },
+    {
+      "actor": "staff",
+      "rpc": "get_stock_on_hand_value_v1",
+      "http": 403,
+      "status": "PASS",
+      "error": null
+    },
+    {
+      "actor": "cashier",
+      "rpc": "get_store_sale_items",
+      "http": 200,
+      "status": "PASS",
+      "error": null
+    },
+    {
+      "actor": "cashier",
+      "rpc": "get_stock_in_items_v2",
+      "http": 200,
+      "status": "PASS",
+      "error": null
+    },
+    {
+      "actor": "cashier",
+      "rpc": "get_stock_on_hand_value_v1",
+      "http": 403,
+      "status": "PASS",
+      "error": null
+    },
+    {
+      "actor": "no_membership",
+      "rpc": "get_store_sale_items",
+      "http": 403,
+      "status": "PASS",
+      "error": null
+    },
+    {
+      "actor": "no_membership",
+      "rpc": "get_stock_in_items_v2",
+      "http": 403,
+      "status": "PASS",
+      "error": null
+    },
+    {
+      "actor": "no_membership",
+      "rpc": "get_stock_on_hand_value_v1",
+      "http": 403,
+      "status": "PASS",
+      "error": null
+    },
+    {
+      "actor": "other_org",
+      "rpc": "get_store_sale_items",
+      "http": 403,
+      "status": "PASS",
+      "error": null
+    },
+    {
+      "actor": "other_org",
+      "rpc": "get_stock_in_items_v2",
+      "http": 403,
+      "status": "PASS",
+      "error": null
+    },
+    {
+      "actor": "other_org",
+      "rpc": "get_stock_on_hand_value_v1",
+      "http": 403,
+      "status": "PASS",
+      "error": null
+    },
+    {
+      "actor": "unassigned",
+      "rpc": "get_store_sale_items",
+      "http": 403,
+      "status": "PASS",
+      "error": null
+    },
+    {
+      "actor": "unassigned",
+      "rpc": "get_stock_in_items_v2",
+      "http": 403,
+      "status": "PASS",
+      "error": null
+    },
+    {
+      "actor": "unassigned",
+      "rpc": "get_stock_on_hand_value_v1",
+      "http": 403,
+      "status": "PASS",
+      "error": null
+    },
+    {
+      "actor": "inactive",
+      "rpc": "get_store_sale_items",
+      "http": 403,
+      "status": "PASS",
+      "error": null
+    },
+    {
+      "actor": "inactive",
+      "rpc": "get_stock_in_items_v2",
+      "http": 403,
+      "status": "PASS",
+      "error": null
+    },
+    {
+      "actor": "inactive",
+      "rpc": "get_stock_on_hand_value_v1",
+      "http": 403,
+      "status": "PASS",
+      "error": null
+    },
+    {
+      "actor": "anon",
+      "rpc": "get_store_sale_items",
+      "http": 401,
+      "status": "PASS",
+      "error": null
+    },
+    {
+      "actor": "anon",
+      "rpc": "get_stock_in_items_v2",
+      "http": 401,
+      "status": "PASS",
+      "error": null
+    },
+    {
+      "actor": "anon",
+      "rpc": "get_stock_on_hand_value_v1",
+      "http": 401,
+      "status": "PASS",
+      "error": null
+    }
+  ],
+  "pass": 27,
+  "fail": 0,
+  "localOnly": true
+}

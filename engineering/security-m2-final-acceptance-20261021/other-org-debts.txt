@@ -1,0 +1,37 @@
+- generic: Business Debts
+- generic: Track business debts, payments and debt relative to stock value.
+- generic: Total Debt
+- generic: TZS 0
+- generic: Balance
+- generic: TZS 0
+- generic: Stock Value
+- generic: TZS 0
+- generic: Difference
+- generic: TZS 0
+- generic: SAFE
+- generic: No active debts right now.
+- button "Add Debt":
+  - generic: Add Debt
+- generic: Debt List
+- generic: ALL
+- generic: "0"
+- generic: OPEN
+- generic: "0"
+- generic: PARTIAL
+- generic: "0"
+- generic: OVERDUE
+- generic: "0"
+- generic: PAID
+- generic: "0"
+- textbox "Search lender, supplier, store, status..."
+- generic: ALL
+- generic: OPEN
+- generic: PARTIAL
+- generic: OVERDUE
+- generic: PAID
+- generic: Highest
+- generic: Newest
+- generic: Overdue
+- generic: Showing0 of0 debts
+- generic: No Debts
+- generic: No debts recorded yet.

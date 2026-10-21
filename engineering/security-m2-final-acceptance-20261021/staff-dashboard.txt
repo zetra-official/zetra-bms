@@ -1,0 +1,159 @@
+- generic: Z
+- generic: ZETRA BMS
+- generic: Business Management System
+- generic: 
+- generic: Home
+- generic: 
+- generic: POS / Sell
+- generic: 
+- generic: Products
+- generic: 
+- generic: Inventory
+- generic: 
+- generic: Customers (CRM)
+- generic: 
+- generic: Credit
+- generic: 
+- generic: Expenses
+- generic: 
+- generic: Finance
+- generic: 
+- generic: Reports
+- generic: 
+- generic: Stores
+- generic: 
+- generic: AI Assistant
+- generic: NEW
+- generic: 
+- generic: More
+- generic: BUSINESS SHORTCUTS
+- generic: 
+- generic: Business Position
+- generic: 
+- generic: 
+- generic: Business Debts
+- generic: 
+- generic: 
+- generic: Incoming Stock
+- generic: 
+- generic: 
+- generic: Current Organization
+- generic: M2 SYNTHETIC
+- generic: 
+- generic: 
+- generic: Current Store
+- generic: M2 synthetic STANDARD
+- generic: 
+- generic: 
+- generic: M2 SYNTHETIC
+- generic: STAFF
+- generic: 
+- generic: 
+- generic: M2 SYNTHETIC
+- generic: 
+- generic: 
+- generic: M2 synthetic STANDARD
+- generic: 
+- generic: 
+- textbox "Search products, customers..."
+- generic: Products · Customers
+- generic: 
+- generic: "2"
+- generic: 
+- generic: M2 SYNTHETIC
+- generic: STAFF
+- generic: 
+- generic: 
+- generic: Good afternoon!
+- button "Dashboard currency":
+  - generic: TZS ▾
+- generic: 
+- generic: Today • 21 Oct 2026
+- generic: 
+- generic: 
+- generic: Today's Sales
+- generic: TZS 0
+- generic: 0 completed orders
+- generic: Open POS
+- generic: 
+- generic: 
+- generic: Money In
+- generic: TZS 0
+- generic: after expenses
+- generic: 
+- generic: Expenses
+- generic: TZS 0
+- generic: today
+- generic: 
+- generic: Net Profit
+- generic: Owner only
+- generic: restricted
+- generic: 
+- generic: Sales Performance
+- generic: Visualize sales trends and compare performance over time.
+- generic: Daily
+- generic: Weekly
+- generic: Monthly
+- generic: 
+- generic: Compare
+- generic: 
+- generic: 19 Oct 2026 - 25 Oct 2026
+- generic: 
+- generic: Total Sales
+- generic: TZS 0
+- generic: selected period
+- generic: 
+- generic: Previous Period
+- generic: TZS 0
+- generic: comparison baseline
+- generic: 
+- generic: Difference
+- generic: +TZS 0
+- generic: 0.0%
+- generic: 
+- generic: Orders
+- generic: "0"
+- generic: completed sales
+- generic: 
+- generic: Average Order Value
+- generic: TZS 0
+- generic: sales ÷ orders
+- generic: 
+- generic: Sales by Payment Method
+- generic: No verified payment activity for this period.
+- generic: 
+- generic: Top Selling Products
+- generic: No verified product sales for this period.
+- button "Open Customer Relationship Management":
+  - generic: 
+  - generic: Customer Intelligence (CRM)
+  - generic: "[ZETRA_AI_CRM_REPOSITORY] Failed to load canonical CRM intelligence: OWNER_ONLY"
+- generic: 
+- generic: ZETRA AI
+- generic: Your Business Assistant
+- generic: LIVE
+- generic: 
+- generic: 
+- generic: Ask ZETRA AI
+- generic: Ask about sales, stock, customers, profit and trends.
+- generic: 
+- generic: 
+- generic: Summarize Today
+- generic: 
+- generic: Low Stock Alert
+- generic: 
+- generic: Top Products
+- generic: Business Financial Overview
+- generic: 01 Oct 2026 - 31 Oct 2026
+- button "Open full financial overview":
+  - generic: ↖
+  - generic: ↗
+  - generic: ↙
+  - generic: ↘
+- generic: This Month
+- generic: 3 Months
+- generic: 6 Months
+- generic: This Year
+- generic: Sales
+- generic: Expenses
+- generic: Net Profit

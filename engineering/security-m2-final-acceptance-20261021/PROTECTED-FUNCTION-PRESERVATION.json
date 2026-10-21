@@ -1,0 +1,432 @@
+{
+  "localOnly": true,
+  "draftSha256": "e3423384c3b2110b9af8945e7fd80865e77bff6e8d5dc658d257152312677106",
+  "functions": [
+    {
+      "identity": "get_club_owner_intelligence_v1(uuid,timestamp with time zone,timestamp with time zone)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "get_store_net_profit(uuid,timestamp with time zone,timestamp with time zone)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "get_profit_summary(uuid,timestamp with time zone,timestamp with time zone)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "get_my_notifications_v1(uuid,integer)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "get_financial_dashboard_intelligent_v1(uuid,uuid,date,date)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "get_stock_on_hand_value_v1(uuid,uuid)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "get_stock_on_hand_value_v2(uuid,uuid)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "close_field_cycle_v1(uuid,text)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "get_field_cycle_summary_v1(uuid)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "get_my_notifications(uuid,integer)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": false
+    },
+    {
+      "identity": "get_store_sale_item_by_barcode(uuid,text)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "get_product_profit_report_v1(uuid,timestamp with time zone,timestamp with time zone,integer)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "get_product_profit_report_v2(uuid,timestamp with time zone,timestamp with time zone,integer)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "get_stock_in_value_v1(uuid,uuid,date,date)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "get_capital_recovery_summary_v1(uuid)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "get_capital_recovery_history_v1(uuid,integer)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "allocate_field_wallet_v1(uuid,uuid,numeric,text)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "allocate_field_money_v1(uuid,uuid,numeric,text)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "get_active_field_cycle_summary_v1(uuid)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "get_field_wallet_history_by_cycle_v1(uuid,uuid)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "get_capital_recovery_history_v2(uuid,integer)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "get_store_net_profit_v2(uuid,timestamp with time zone,timestamp with time zone)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "record_field_expense_v1(uuid,uuid,numeric,text,text,text,text,text,numeric,numeric,numeric,text)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "open_field_cycle_v1(uuid,text,numeric,text)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "get_business_statement_goods_summary_v2(uuid,timestamp with time zone,timestamp with time zone)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "get_field_wallet_summary_v1(uuid)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "get_field_stock_summary_v1(uuid)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "get_business_statement_capital_recovery_v1(uuid,timestamp with time zone,timestamp with time zone)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "get_active_field_cycle_v1(uuid)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "get_field_cycles_history_v1(uuid)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "get_field_wallet_history_v1(uuid)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "get_field_agent_stock_summary_v1(uuid,uuid)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "get_field_stock_summary_by_cycle_v1(uuid,uuid)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "preview_product_catalog_share_v1(text)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "import_product_catalog_share_v1(text,uuid,uuid,uuid[])",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "get_product_profit_report_v3(uuid,timestamp with time zone,timestamp with time zone,integer)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "get_products(uuid,uuid)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "get_products_manage(uuid,uuid)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "upsert_product(uuid,uuid,text,text,text,text,boolean,numeric,numeric,text,uuid,boolean,numeric,text,text,boolean,boolean,text)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "get_business_loan_summary(uuid,uuid)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "get_business_loans(uuid,uuid,text)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "get_ai_crm_customer_360_v1(uuid,uuid,timestamp with time zone,timestamp with time zone,uuid,integer)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "create_business_debt(uuid,text,numeric,uuid,text,text,text,text,text,date)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "record_business_debt_payment(uuid,numeric,text)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "get_business_debts(uuid,uuid,text)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "get_business_debt_summary(uuid,uuid)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "get_supplier_debt_history_v1(uuid)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "update_business_debt_v1(uuid,text,numeric,text,text,uuid)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "get_inbound_stock_summary_v1(uuid,uuid)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "receive_inbound_stock_partial_v1(uuid,jsonb)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "get_inbound_stock_orders_v1(uuid,uuid)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "record_inbound_stock_payment_v1(uuid,numeric,text,text,text)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "add_inbound_stock_item_v1(uuid,text,text,text,text,text,numeric,numeric,numeric,text)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "get_inbound_stock_order_items_v1(uuid)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "delete_inbound_stock_order_v1(uuid)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "get_inbound_stock_suggestions_v1(uuid,uuid,text)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "create_inbound_stock_order_v1(uuid,uuid,text,text,text,text,text,text,date,text)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "get_supplier_stock_history_v1(uuid)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "receive_inbound_stock_v1(uuid)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "get_my_notifications_v3(uuid,integer)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "get_business_profit_position_v1(uuid,uuid,date,date)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "get_business_loan_payments(uuid)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "get_stock_in_items_v2(uuid,uuid,date,date,boolean)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "get_store_sale_items(uuid)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "get_stock_in_items_v1(uuid,uuid,date,date)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "get_stock_in_value_v2(uuid,uuid,date,date)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "get_notification_movement_items_v1(uuid[])",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "update_inbound_stock_item_v1(uuid,text,text,text,text,text,numeric,numeric,numeric,text)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "get_items_overview_v1(uuid,uuid)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "get_business_statement_goods_summary_v1(uuid,timestamp with time zone,timestamp with time zone)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    },
+    {
+      "identity": "get_staff_performance_detail_v1(uuid,uuid,date,date)",
+      "present": true,
+      "exactProtectedDefinition": true,
+      "containsM2Guard": true
+    }
+  ]
+}

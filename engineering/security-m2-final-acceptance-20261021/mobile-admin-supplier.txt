@@ -1,0 +1,42 @@
+- generic: ‹
+- generic: Supplier Detail
+- generic: M2 Supplier
+- generic: Supplier Information
+- generic: Supplier Name
+- textbox "Supplier name": M2 Supplier
+- generic: Phone Number
+- textbox "e.g. +255..."
+- generic: Email
+- textbox "supplier@example.com"
+- generic: Address / Location
+- textbox "Paste a Google Maps link or enter a location..."
+- button "Save Supplier Info":
+  - generic: Save Supplier Info
+- generic: Stock Summary
+- generic: Total stock entries:3
+- generic: Total qty added:2
+- generic: History Filter
+- generic: Recent 5
+- generic: Today
+- generic: 7 Days
+- generic: Month
+- generic: All
+- generic: Showing:3 entries
+- generic: M2 concurrent synthetic
+- generic: SKU:M2-CONCURRENT • Store:M2 synthetic STANDARD
+- generic: ADD
+- generic: Qty:2
+- generic: Invoice / Ref:M2-CONCURRENT-902
+- generic: Date:10/21/2026, 10:27:26 AM
+- generic: M2 concurrent synthetic
+- generic: SKU:M2-CONCURRENT • Store:M2 synthetic STANDARD
+- generic: INBOUND
+- generic: Qty:2
+- generic: Invoice / Ref:M2-CONCURRENT-902
+- generic: Date:10/21/2026, 10:27:25 AM
+- generic: M2 Synthetic 商品 منتج
+- generic: SKU:M2-SKU • Store:M2 synthetic STANDARD
+- generic: INBOUND
+- generic: Qty:2
+- generic: Invoice / Ref:M2-ONLY-500
+- generic: Date:10/21/2026, 9:35:07 AM

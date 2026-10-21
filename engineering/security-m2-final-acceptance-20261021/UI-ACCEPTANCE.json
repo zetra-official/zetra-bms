@@ -1,0 +1,35 @@
+{
+  "actualApp": true,
+  "backend": "real GoTrue + PostgREST + hardened disposable PostgreSQL",
+  "apiEmulation": false,
+  "financialPostingsThroughUI": false,
+  "desktopRoles": [
+    "Owner",
+    "Admin",
+    "Staff",
+    "Cashier",
+    "no_membership",
+    "other_org"
+  ],
+  "mobileResponsiveViewport": {
+    "width": 390,
+    "height": 844
+  },
+  "coverage": [
+    "Owner incoming/debts/statement",
+    "Admin dashboard/incoming/supplier/debts/statement/POS",
+    "Staff dashboard/debts",
+    "Cashier workspace/refresh/debts",
+    "No-membership onboarding/deep-link boundary",
+    "Other-org dashboard/debts",
+    "Mobile Admin refresh and role transitions"
+  ],
+  "physicalAndroidAuthenticated": "NOT VERIFIED \u2014 device changed app; automation stopped",
+  "physicalIphone": "NOT TESTED",
+  "limitations": [
+    "Native PDF Print/Sharing not tested",
+    "Every route/export variation not exhaustively exercised",
+    "Existing CRM technical Owner-only error and mixed-language Home alert documented"
+  ],
+  "localGatewayCorsFailure": "RESOLVED, independent-origin UI passed afterward"
+}
