@@ -1,0 +1,35 @@
+TAP version 13
+# Subtest: Edited cost retains original verified expectation separately
+ok 1 - Edited cost retains original verified expectation separately
+  ---
+  duration_ms: 8.7825
+  ...
+# Subtest: Precision two packs still produces exactly 200 base units
+ok 2 - Precision two packs still produces exactly 200 base units
+  ---
+  duration_ms: 1.0948
+  ...
+# Subtest: Expected acquisition cost survives draft persistence and recovery
+ok 3 - Expected acquisition cost survives draft persistence and recovery
+  ---
+  duration_ms: 3.1757
+  ...
+# Subtest: A legacy draft does not invent its missing original cost snapshot
+ok 4 - A legacy draft does not invent its missing original cost snapshot
+  ---
+  duration_ms: 1.4634
+  ...
+# Subtest: Selection captures canonical current acquisition cost on both platforms
+ok 5 - Selection captures canonical current acquisition cost on both platforms
+  ---
+  duration_ms: 7.8336
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 301.7851

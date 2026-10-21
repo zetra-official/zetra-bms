@@ -1,0 +1,91 @@
+{
+  "release": "ZETRA-COMBINED-M3-PRODUCTS-COMPAT-20261022",
+  "approvedBase": "b2aed3c1",
+  "platforms": {
+    "web": {
+      "descriptor": "BUILD-web.json",
+      "descriptorSHA256": "db05145503b2f6d099fd9a1dbada6c1a4e904b8dd88e1cc5e39325890f2f2d71",
+      "archive": "RELEASE-web.zip",
+      "archiveSHA256": "c780b845a80c76fb87f65c1dfbd477fe16f59d52f59dd8b2e686c02e53cd6037",
+      "files": 274
+    },
+    "android": {
+      "descriptor": "BUILD-android.json",
+      "descriptorSHA256": "64037638297b9e92500a68eeaf32c749d4043d79120b083678a09ce24757dbea",
+      "archive": "RELEASE-android.zip",
+      "archiveSHA256": "fbf612ab83c99d441a22a671b495e90fdf574921102196e4323db919939a2de5",
+      "files": 48
+    }
+  },
+  "sql": {
+    "baselineFunctions": [
+      {
+        "identity": "add_inbound_stock_item_v1(uuid,text,text,text,text,text,numeric,numeric,numeric,text)",
+        "md5": "8012fb8a58272f0782dc2c1d698ea30d",
+        "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}"
+      },
+      {
+        "identity": "adjust_stock(uuid,uuid,numeric,text,text,date,text,text,integer,text)",
+        "md5": "4235c2f1901a6e95a3165c5604c36834",
+        "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}"
+      },
+      {
+        "identity": "create_inbound_stock_order_v1(uuid,uuid,text,text,text,text,text,text,date,text)",
+        "md5": "5ea3b8db01dd87fe02cd319644dcabb1",
+        "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}"
+      },
+      {
+        "identity": "create_notification_from_stock_movement()",
+        "md5": "39c455430897448eb9b749edd828c493",
+        "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}"
+      },
+      {
+        "identity": "create_stock_movement_notification()",
+        "md5": "f29837655ec0d9f32204d8cdfacc0158",
+        "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}"
+      },
+      {
+        "identity": "get_org_accounting_currency_v1(uuid)",
+        "md5": "562cc7600e60b1acbd045cd6fc1a2184",
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}"
+      },
+      {
+        "identity": "receive_inbound_stock_partial_v1(uuid,jsonb)",
+        "md5": "3b18bb6f58c6123d18d920662232f14b",
+        "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}"
+      },
+      {
+        "identity": "upsert_product(uuid,uuid,text,text,text,text,boolean,numeric,numeric,text,uuid,boolean,numeric,text,text,boolean,boolean,text)",
+        "md5": "cbd18b6680580c5879e8d1d19dc228a4",
+        "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}"
+      }
+    ],
+    "sql": {
+      "RELEASE.sql": "82b48246258698b7424919bad9e75dd0621f2921529fd89d807226f98133b6e8",
+      "ROLLBACK.sql": "b7a207e03b0a92e039c56d0f3595195015f81ccb1cba69dab6741296944dff72"
+    },
+    "customerDataRewrite": false,
+    "broadM2Deployment": false,
+    "existingProductsWriterReplaced": false,
+    "rollbackPreservesPostedEvidence": true
+  },
+  "targets": {
+    "readOnly": true,
+    "at": "2026-10-21T20:48:59.767267+00:00",
+    "site": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+    "webRollback": "6ad7c9964f937e8f233408c1",
+    "webDomain": "https://app.zetra.tz",
+    "androidChannel": "production",
+    "androidRuntime": "1.0.0",
+    "androidRollbackGroup": "a22b1c60-6970-4912-887c-72bf70849579",
+    "androidRollbackUpdate": "01a15afc-311a-750a-9814-25fa1fe68743",
+    "publication": false
+  },
+  "physicalDeviceAcceptance": "NOT TESTED",
+  "financialSmokeWrites": false,
+  "evidence": {
+    "SQL-REHEARSAL.json": "cff5a03d04453f53d1be0ada8260d70b483ede7e94abb0bf89295016d83be233",
+    "PRICE-UI-RECONCILIATION.json": "c4a98e82bda6f4cca4158f0171071c0ca9e591e5a57a6098b47b877a18b1ff33",
+    "local-corrected-price.png": "9449eb78681d459a14b092f5fead87fecc746d5dbffb28d6aeb6291dcf3d4bf9"
+  }
+}

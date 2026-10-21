@@ -1,0 +1,72 @@
+[
+  {
+    "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+    "md5": "121fbbee444f4c268b831d7d294868be",
+    "identity": "adjust_stock(uuid,uuid,numeric,text,text,date,text,text,integer,text)"
+  },
+  {
+    "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+    "md5": "df67313785436120652be90b33196af7",
+    "identity": "create_notification_from_stock_movement()"
+  },
+  {
+    "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+    "md5": "7e6c298149496266adb0b4684df94b4b",
+    "identity": "create_stock_movement_notification()"
+  },
+  {
+    "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+    "md5": "9f371d035c8d68b6e98970a34e8ae950",
+    "identity": "m3_incoming_catalog_v1(uuid,uuid,text,text)"
+  },
+  {
+    "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+    "md5": "928b2f16688fb065be8a3dbd25c96697",
+    "identity": "m3_incoming_receipt_v1(uuid)"
+  },
+  {
+    "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+    "md5": "daa3933cf0095ebc0a2ad91148a80f86",
+    "identity": "m3_receive_saved_v1(uuid,uuid,jsonb)"
+  },
+  {
+    "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+    "md5": "e309990290ee2f2b69c0539f3f47e966",
+    "identity": "m3_saved_order_context_v1(uuid)"
+  },
+  {
+    "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+    "md5": "b71b2718f8b98ea632abfbb6b685f705",
+    "identity": "m3_staff_operational_v1(uuid,uuid,date,integer)"
+  },
+  {
+    "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+    "md5": "2b359bc93202aca210a5f3877b6f91fc",
+    "identity": "m3_submit_incoming_v1(uuid,uuid,uuid,jsonb)"
+  },
+  {
+    "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+    "md5": "3e16cff9beb43fe458fbdda36a7e66e6",
+    "identity": "receive_inbound_stock_partial_v1(uuid,jsonb)"
+  },
+  {
+    "acl": "{postgres=X/postgres}",
+    "md5": "fe472839597ff93d814e85cf68decf3c",
+    "identity": "security_m2.owner_of(uuid)"
+  },
+  {
+    "acl": "{postgres=X/postgres}",
+    "md5": "2352fb4555b4bdf1120d5661621edb7b",
+    "identity": "security_m2.require_owner(uuid,uuid)"
+  },
+  {
+    "acl": "{postgres=X/postgres}",
+    "md5": "ee4c3b15d8ceaec549ec644a8c3f5936",
+    "identity": "security_m2.require_store(uuid,uuid)"
+  },
+  {
+    "acl": "{postgres=X/postgres}",
+    "md5": "83ea098198f350c2e74864c5c3ccda7f",
+    "identity": "security_m2.store_allowed(uuid,uuid)"
+  }
+]

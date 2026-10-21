@@ -1,0 +1,12 @@
+{
+  "status": "PASS",
+  "genuineLocalUI": true,
+  "syntheticOnly": true,
+  "checks": {
+    "currentPrices": true,
+    "onePriceAudit": true,
+    "destinationQuantity": true,
+    "otherStoreUntouched": true,
+    "singleCanonicalMovement": true
+  }
+}

@@ -1,0 +1,176 @@
+{
+  "localOnly": true,
+  "canonicalProductsWriter": true,
+  "checks": [
+    {
+      "name": "Standard edited cost and selling receive via canonical Products",
+      "status": "PASS"
+    },
+    {
+      "name": "Standard base-unit stock increase is exact only in destination",
+      "status": "PASS"
+    },
+    {
+      "name": "Standard current organization product prices are 600 and 1200",
+      "status": "PASS"
+    },
+    {
+      "name": "Standard original identity and precision metadata preserved",
+      "status": "PASS"
+    },
+    {
+      "name": "Standard receiving cost evidence is actual 600 per new unit",
+      "status": "PASS"
+    },
+    {
+      "name": "Standard cost and selling audit binds original values and receipt",
+      "status": "PASS"
+    },
+    {
+      "name": "Standard exact retry does not repeat quantity or price changes",
+      "status": "PASS"
+    },
+    {
+      "name": "Standard saved intended cost is not current cost until receiving",
+      "status": "PASS"
+    },
+    {
+      "name": "Standard partial applies both approved current prices",
+      "status": "PASS"
+    },
+    {
+      "name": "Standard duplicate partial is idempotent",
+      "status": "PASS"
+    },
+    {
+      "name": "Standard full remainder retains the order-applied cost and price",
+      "status": "PASS"
+    },
+    {
+      "name": "Standard prior receiving receipt unchanged after later price update",
+      "status": "PASS"
+    },
+    {
+      "name": "Standard historical sale, price and COGS unchanged bytewise",
+      "status": "PASS"
+    },
+    {
+      "name": "Standard only one canonical supplier liability",
+      "status": "PASS"
+    },
+    {
+      "name": "Standard stale current-cost expectation cannot overwrite a newer edit",
+      "status": "PASS"
+    },
+    {
+      "name": "Standard actor 2 cannot edit protected current prices via Incoming",
+      "status": "PASS"
+    },
+    {
+      "name": "Standard actor 3 cannot edit protected current prices via Incoming",
+      "status": "PASS"
+    },
+    {
+      "name": "Standard actor 4 cannot edit protected current prices via Incoming",
+      "status": "PASS"
+    },
+    {
+      "name": "Standard actor 6 cannot edit protected current prices via Incoming",
+      "status": "PASS"
+    },
+    {
+      "name": "Standard concurrent cost-edit retry returns one exact receipt",
+      "status": "PASS"
+    },
+    {
+      "name": "Standard cost-only update does not fabricate a selling change",
+      "status": "PASS"
+    },
+    {
+      "name": "Precision edited cost and selling receive via canonical Products",
+      "status": "PASS"
+    },
+    {
+      "name": "Precision base-unit stock increase is exact only in destination",
+      "status": "PASS"
+    },
+    {
+      "name": "Precision current organization product prices are 600 and 1200",
+      "status": "PASS"
+    },
+    {
+      "name": "Precision original identity and precision metadata preserved",
+      "status": "PASS"
+    },
+    {
+      "name": "Precision receiving cost evidence is actual 600 per new unit",
+      "status": "PASS"
+    },
+    {
+      "name": "Precision cost and selling audit binds original values and receipt",
+      "status": "PASS"
+    },
+    {
+      "name": "Precision exact retry does not repeat quantity or price changes",
+      "status": "PASS"
+    },
+    {
+      "name": "Precision saved intended cost is not current cost until receiving",
+      "status": "PASS"
+    },
+    {
+      "name": "Precision partial applies both approved current prices",
+      "status": "PASS"
+    },
+    {
+      "name": "Precision duplicate partial is idempotent",
+      "status": "PASS"
+    },
+    {
+      "name": "Precision full remainder retains the order-applied cost and price",
+      "status": "PASS"
+    },
+    {
+      "name": "Precision prior receiving receipt unchanged after later price update",
+      "status": "PASS"
+    },
+    {
+      "name": "Precision historical sale, price and COGS unchanged bytewise",
+      "status": "PASS"
+    },
+    {
+      "name": "Precision only one canonical supplier liability",
+      "status": "PASS"
+    },
+    {
+      "name": "Precision stale current-cost expectation cannot overwrite a newer edit",
+      "status": "PASS"
+    },
+    {
+      "name": "Precision actor 2 cannot edit protected current prices via Incoming",
+      "status": "PASS"
+    },
+    {
+      "name": "Precision actor 3 cannot edit protected current prices via Incoming",
+      "status": "PASS"
+    },
+    {
+      "name": "Precision actor 4 cannot edit protected current prices via Incoming",
+      "status": "PASS"
+    },
+    {
+      "name": "Precision actor 6 cannot edit protected current prices via Incoming",
+      "status": "PASS"
+    },
+    {
+      "name": "Precision concurrent cost-edit retry returns one exact receipt",
+      "status": "PASS"
+    },
+    {
+      "name": "Precision cost-only update does not fabricate a selling change",
+      "status": "PASS"
+    }
+  ],
+  "pass": 42,
+  "fail": 0
+}

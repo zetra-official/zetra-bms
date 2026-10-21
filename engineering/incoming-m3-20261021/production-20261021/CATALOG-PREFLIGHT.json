@@ -1,0 +1,29 @@
+{
+  "at": "2026-10-21T20:33:08.143943+00:00",
+  "readOnly": true,
+  "project": "dcmhqdckzhbuakvcyjit",
+  "customerRowsRead": false,
+  "hostedWrites": false,
+  "functions": [
+    {
+      "schema": "public",
+      "name": "adjust_stock",
+      "sha256": "af91831f8c2f66024b2f978372bfefc04a514e1fbba09225bcffc8f786461b64"
+    },
+    {
+      "schema": "public",
+      "name": "upsert_product",
+      "sha256": "9783d28a9aa727804117423ce17f93459107f0f78eb9c74910f8380597365aef"
+    },
+    {
+      "schema": "public",
+      "name": "receive_inbound_stock_partial_v1",
+      "sha256": "40b5417de24eb7ae12fe1223aa9146abaa036277d970ad9cb7da762c02633e0b"
+    },
+    {
+      "schema": "public",
+      "name": "get_org_accounting_currency_v1",
+      "sha256": "669da94793849dc706ee405bc2cc6eaddbbe53fb2d82cdb551c90a1e5e213db9"
+    }
+  ]
+}

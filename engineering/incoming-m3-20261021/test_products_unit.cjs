@@ -1,0 +1,12 @@
+const fs=require('fs'),path=require('path'),esbuild=require('../../node_modules/esbuild'),cp=require('child_process');
+const testFile=path.join(__dirname,'products-model.test.cjs');
+const source=`const test=require('node:test'),a=require('node:assert/strict'),{command,DraftRepository}=require('./products-model.bundle.cjs');
+const id=n=>'81000000-0000-4000-8000-'+String(n).padStart(12,'0');
+function draft(){return {version:1,id:id(4),requestId:id(5),scope:{actorId:id(1),organizationId:id(2),storeId:id(3),role:'owner'},revision:1,status:'EDITING',supplierId:null,purpose:'EXISTING_NON_CREDIT_STOCK',nonCreditConfirmed:true,lines:[{key:id(6),productId:id(7),name:'Original 商品 دواء',sku:'SKU',barcode:'',unit:'Box',category:'',quantity:'2',cost:'600',selling:'1200',expectedCost:'500',expectedSelling:'1000',isPrecision:true,packSize:'100',baseUnit:'tablet',stockMode:'BOX',calculatorValid:true,note:''}]}}
+test('Edited cost retains original verified expectation separately',()=>{const p=command(draft(),'RECEIVE_NOW');a.equal(p.lines[0].unit_cost,'600');a.equal(p.lines[0].expected_cost_price,'500');a.equal(p.lines[0].selling_price,'1200');a.equal(p.lines[0].expected_selling_price,'1000')});
+test('Precision two packs still produces exactly 200 base units',()=>a.equal(command(draft(),'RECEIVE_NOW').lines[0].quantity,'200'));
+test('Expected acquisition cost survives draft persistence and recovery',async()=>{let v=null;const d=draft(),store={read:async()=>v,write:async(k,s)=>{v=s},remove:async()=>{v=null}};await new DraftRepository(store,d.scope).save(d);a.equal((await new DraftRepository(store,d.scope).load()).lines[0].expectedCost,'500')});
+test('A legacy draft does not invent its missing original cost snapshot',()=>{const d=draft();delete d.lines[0].expectedCost;a.equal(command(d,'RECEIVE_NOW').lines[0].expected_cost_price,null)});
+test('Selection captures canonical current acquisition cost on both platforms',()=>{for(const platform of ['web','android'])a.ok(require('fs').readFileSync(__dirname+'/source-'+platform+'/src/incoming/BulkScreen.tsx','utf8').includes('expectedCost:String(p.cost_price'))});
+`;
+fs.writeFileSync(testFile,source);esbuild.buildSync({entryPoints:[path.join(__dirname,'source-web/src/incoming/model.ts')],bundle:true,platform:'node',outfile:path.join(__dirname,'products-model.bundle.cjs')});const r=cp.spawnSync(process.execPath,['--test',testFile],{encoding:'utf8'});fs.writeFileSync(path.join(__dirname,'PRODUCTS-UNIT.log'),r.stdout+r.stderr);process.stdout.write(r.stdout+r.stderr);process.exitCode=r.status;

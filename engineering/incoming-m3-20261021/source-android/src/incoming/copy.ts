@@ -6,7 +6,7 @@ export const incomingCopy={
   "sharedPrice": "This product is shared across stores. A store-specific pricing contract is required.",
   "savedChanged": "The saved order changed. Review it before receiving.",
 
-  "precision": "Whole base-unit receipts only. Pack metadata stays unchanged. Current selling-price changes apply only on confirmed receiving. A different purchase cost requires verified cost-basis policy; no historical revaluation.",
+  "precision": "Whole base-unit receipts only. Pack metadata stays unchanged. Current cost and selling prices follow the existing Products contract after successful receiving. Historical sales and receipts stay unchanged.",
   "title": "Bulk Incoming Stock",
   "owner": "Owner only: purchase-cost entry",
   "unlock": "Unlock local draft",
@@ -67,7 +67,7 @@ export const incomingCopy={
   "sharedPrice": "Bidhaa hii inatumika kwenye stores zaidi ya moja. Inahitaji mkataba wa bei kwa kila store.",
   "savedChanged": "Order iliyohifadhiwa imebadilika. Ihakiki kabla ya kupokea.",
 
-  "precision": "Pokea base units kamili tu. Pack metadata haibadilishwi. Bei ya sasa ya kuuza hubadilika baada ya receiving kuthibitishwa. Purchase cost tofauti inahitaji cost-basis policy iliyothibitishwa; hakuna historical revaluation.",
+  "precision": "Pokea base units kamili pekee. Taarifa za pack hazibadiliki. Cost Price na Selling Price za sasa zinafuata Products baada ya receiving kufanikiwa. Mauzo na risiti za zamani hazibadilishwi.",
   "title": "Upokeaji wa Bidhaa kwa Wingi",
   "owner": "Owner pekee: kuingiza gharama",
   "unlock": "Fungua rasimu ya kifaa",
@@ -128,7 +128,7 @@ export const incomingCopy={
   "sharedPrice": "Ce produit est partagé entre magasins. Un contrat de prix par magasin est requis.",
   "savedChanged": "La commande enregistrée a changé. Vérifiez-la avant réception.",
 
-  "precision": "Unités de base entières uniquement. Métadonnées des packs conservées. Prix de vente actualisé seulement après réception confirmée. Un coût d’achat différent exige une règle de valorisation vérifiée ; aucun historique réévalué.",
+  "precision": "Unités de base entières uniquement. Le conditionnement reste inchangé. Les prix actuels de coût et de vente suivent le contrat Produits après réception réussie. Les ventes et reçus historiques restent inchangés.",
   "title": "Réception de stock en lot",
   "owner": "Propriétaire uniquement : coûts d’achat",
   "unlock": "Déverrouiller le brouillon local",
@@ -189,7 +189,7 @@ export const incomingCopy={
   "sharedPrice": "Este produto é partilhado entre lojas. É necessário um contrato de preço por loja.",
   "savedChanged": "O pedido guardado mudou. Reveja-o antes de receber.",
 
-  "precision": "Apenas unidades base inteiras. Metadados das embalagens preservados. Preço de venda atualizado só na receção confirmada. Custo de compra diferente exige política de valorização verificada; sem reavaliar o histórico.",
+  "precision": "Apenas unidades base inteiras. A embalagem permanece inalterada. Os preços atuais de custo e venda seguem o contrato Produtos após receção bem-sucedida. Vendas e recibos históricos permanecem inalterados.",
   "title": "Recebimento de estoque em lote",
   "owner": "Somente proprietário: custos de aquisição",
   "unlock": "Desbloquear rascunho local",
@@ -250,7 +250,7 @@ export const incomingCopy={
   "sharedPrice": "هذا المنتج مشترك بين متاجر. يلزم عقد تسعير خاص بكل متجر.",
   "savedChanged": "تغير الطلب المحفوظ. راجعه قبل الاستلام.",
 
-  "precision": "استلام وحدات أساسية كاملة فقط. تبقى بيانات العبوة ثابتة. يتغير سعر البيع الحالي بعد تأكيد الاستلام فقط. تتطلب تكلفة شراء مختلفة سياسة تكلفة موثقة؛ لا إعادة تقييم للسجلات التاريخية.",
+  "precision": "استلام وحدات أساسية كاملة فقط. لا تتغير بيانات العبوة. تتبع أسعار التكلفة والبيع الحالية عقد المنتجات بعد نجاح الاستلام. تبقى المبيعات والإيصالات التاريخية دون تغيير.",
   "title": "استلام المخزون بالجملة",
   "owner": "للمالك فقط: إدخال تكاليف الشراء",
   "unlock": "فتح المسودة المحلية",
@@ -311,7 +311,7 @@ export const incomingCopy={
   "sharedPrice": "Este producto se comparte entre tiendas. Se requiere un contrato de precios por tienda.",
   "savedChanged": "El pedido guardado cambió. Revíselo antes de recibir.",
 
-  "precision": "Solo unidades base enteras. Se conservan los metadatos del paquete. El precio de venta cambia solo al confirmar la recepción. Un coste de compra distinto requiere una política de valoración verificada; sin revaloración histórica.",
+  "precision": "Solo unidades base enteras. El embalaje no cambia. Los precios actuales de coste y venta siguen el contrato Productos tras una recepción correcta. Las ventas y recibos históricos no cambian.",
   "title": "Recepción de inventario por lotes",
   "owner": "Solo propietario: costos de adquisición",
   "unlock": "Desbloquear borrador local",
@@ -372,7 +372,7 @@ export const incomingCopy={
   "sharedPrice": "此商品由多个门店共用，需要明确的门店定价约定。",
   "savedChanged": "已保存的订单发生变更，请核对后再收货。",
 
-  "precision": "仅接收完整基本单位。保留包装元数据。仅在确认收货后更新当前售价。不同采购成本需要经验证的成本计价规则；不重估历史记录。",
+  "precision": "仅接收完整的基础单位，包装资料保持不变。成功收货后，当前成本价和售价遵循现有商品编辑规则。历史销售和收据保持不变。",
   "title": "批量入库",
   "owner": "仅限所有者：采购成本录入",
   "unlock": "解锁本地草稿",

@@ -1,0 +1,50 @@
+{
+  "readOnly": true,
+  "hostedWrites": false,
+  "customerRowsRead": false,
+  "capturedAt": "2026-10-21T20:42:59.688230+00:00",
+  "functions": [
+    {
+      "identity": "add_inbound_stock_item_v1(uuid,text,text,text,text,text,numeric,numeric,numeric,text)",
+      "md5": "8012fb8a58272f0782dc2c1d698ea30d",
+      "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}"
+    },
+    {
+      "identity": "adjust_stock(uuid,uuid,numeric,text,text,date,text,text,integer,text)",
+      "md5": "4235c2f1901a6e95a3165c5604c36834",
+      "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}"
+    },
+    {
+      "identity": "create_inbound_stock_order_v1(uuid,uuid,text,text,text,text,text,text,date,text)",
+      "md5": "5ea3b8db01dd87fe02cd319644dcabb1",
+      "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}"
+    },
+    {
+      "identity": "create_notification_from_stock_movement()",
+      "md5": "39c455430897448eb9b749edd828c493",
+      "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}"
+    },
+    {
+      "identity": "create_stock_movement_notification()",
+      "md5": "f29837655ec0d9f32204d8cdfacc0158",
+      "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}"
+    },
+    {
+      "identity": "get_org_accounting_currency_v1(uuid)",
+      "md5": "562cc7600e60b1acbd045cd6fc1a2184",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres}"
+    },
+    {
+      "identity": "receive_inbound_stock_partial_v1(uuid,jsonb)",
+      "md5": "3b18bb6f58c6123d18d920662232f14b",
+      "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}"
+    },
+    {
+      "identity": "upsert_product(uuid,uuid,text,text,text,text,boolean,numeric,numeric,text,uuid,boolean,numeric,text,text,boolean,boolean,text)",
+      "md5": "cbd18b6680580c5879e8d1d19dc228a4",
+      "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}"
+    }
+  ],
+  "columnsCaptured": 296,
+  "securitySchemaExists": false
+}

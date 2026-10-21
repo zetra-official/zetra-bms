@@ -1,0 +1,7 @@
+{
+  "localOnly": true,
+  "releaseAndRollbackCompile": true,
+  "privateSchemaAndRPCPermissions": true,
+  "existingFunctionsUnchangedAfterRehearsal": true,
+  "productionWrites": false
+}

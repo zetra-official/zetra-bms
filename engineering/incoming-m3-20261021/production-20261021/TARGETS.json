@@ -1,0 +1,12 @@
+{
+  "readOnly": true,
+  "at": "2026-10-21T20:48:59.767267+00:00",
+  "site": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+  "webRollback": "6ad7c9964f937e8f233408c1",
+  "webDomain": "https://app.zetra.tz",
+  "androidChannel": "production",
+  "androidRuntime": "1.0.0",
+  "androidRollbackGroup": "a22b1c60-6970-4912-887c-72bf70849579",
+  "androidRollbackUpdate": "01a15afc-311a-750a-9814-25fa1fe68743",
+  "publication": false
+}
