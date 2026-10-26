@@ -1,0 +1,14 @@
+{
+  "status": "PASS",
+  "activeDeployment": "6adf3191a53a8fa940120a8b",
+  "servedRootSha256": "1a445c236a23a33fcd50672ebded47375124057d2fe0dbf7cef5cac58f403b74",
+  "baselineSha256": "a76c5e0ff73387d0180a3748fe88fb1e0c786c97b1f721f4da199ec475895faf",
+  "baselineByteMatchesFileInSameDeployment": "/unified-web/_expo/static/js/web/entry-aa1a220f83fc2bc3af12bd18d1127562.js",
+  "servedRootComparison": {
+    "functionBodiesByteIdentical": 1289,
+    "moduleDependencyGraph": "EXACT bijection; ordered edges validated for every module",
+    "runtimeBootstrap": "EXACT after corresponding __r module-ID remapping",
+    "differences": "Generated Metro module numbering/registration ordering only; no application function edits or reconstruction"
+  },
+  "productionWrites": 0
+}

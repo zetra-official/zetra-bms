@@ -1,0 +1,35 @@
+{
+  "status": "PASS",
+  "checks": [
+    {
+      "name": "Genuine Supabase authentication",
+      "status": "PASS"
+    },
+    {
+      "name": "Recovery sale columns under genuine user RLS",
+      "status": "PASS",
+      "role": "owner"
+    },
+    {
+      "name": "Exact organization/store/client-sale lookup",
+      "status": "PASS"
+    },
+    {
+      "name": "Credit follow-up columns under genuine user RLS",
+      "status": "PASS",
+      "rows": 0
+    },
+    {
+      "name": "Wrong store cannot match client sale",
+      "status": "PASS"
+    },
+    {
+      "name": "Known other organization inaccessible",
+      "status": "PASS"
+    }
+  ],
+  "financialWrites": 0,
+  "authentication": "Genuine hosted Supabase session; in-memory only",
+  "rolesNotSignedIn": "NOT TESTED",
+  "readOnly": true
+}

@@ -1,0 +1,5 @@
+scoped-source/** -text
+before-source/** -text
+POS-RECOVERY.patch -text
+*.json -text
+evidence/*.json -text

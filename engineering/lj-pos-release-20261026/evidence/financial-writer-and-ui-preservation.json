@@ -1,0 +1,7 @@
+{
+  "status": "PASS",
+  "canonicalSaleRPCArguments": "BYTE IDENTICAL after line-ending normalization",
+  "customerAndCreditPostingBodies": "BYTE IDENTICAL",
+  "jsxLayoutAndTranslations": "UNCHANGED",
+  "databaseContractsChanged": 0
+}

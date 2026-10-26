@@ -1,0 +1,112 @@
+{
+  "status": "PASS",
+  "cases": 26,
+  "checks": [
+    {
+      "name": "committed PARTIAL sale with exact follow-up evidence accepted",
+      "status": "PASS"
+    },
+    {
+      "name": "missing sale remains uncertain",
+      "status": "PASS"
+    },
+    {
+      "name": "wrong organization",
+      "status": "PASS"
+    },
+    {
+      "name": "wrong store",
+      "status": "PASS"
+    },
+    {
+      "name": "wrong client ID",
+      "status": "PASS"
+    },
+    {
+      "name": "uncompleted sale",
+      "status": "PASS"
+    },
+    {
+      "name": "missing customer",
+      "status": "PASS"
+    },
+    {
+      "name": "missing credit",
+      "status": "PASS"
+    },
+    {
+      "name": "duplicate credit",
+      "status": "PASS"
+    },
+    {
+      "name": "wrong credit amount",
+      "status": "PASS"
+    },
+    {
+      "name": "legacy zero balance does not prove original credit completed",
+      "status": "PASS"
+    },
+    {
+      "name": "legacy missing payment method remains protected",
+      "status": "PASS"
+    },
+    {
+      "name": "legacy fully paid cash customer follow-up can recover",
+      "status": "PASS"
+    },
+    {
+      "name": "total mismatch blocks",
+      "status": "PASS"
+    },
+    {
+      "name": "sale identifier mismatch blocks",
+      "status": "PASS"
+    },
+    {
+      "name": "new exact paid metadata needs no credit",
+      "status": "PASS"
+    },
+    {
+      "name": "already COMPLETE needs no follow-up replay",
+      "status": "PASS"
+    },
+    {
+      "name": "malformed persisted state throws and stays protected",
+      "status": "PASS"
+    },
+    {
+      "name": "same browser refresh restores guard",
+      "status": "PASS"
+    },
+    {
+      "name": "different device same account has no local marker",
+      "status": "PASS"
+    },
+    {
+      "name": "actor/organization/store isolate persistence keys",
+      "status": "PASS"
+    },
+    {
+      "name": "concurrent reconciliation only releases once",
+      "status": "PASS"
+    },
+    {
+      "name": "archive preserved before guard removal",
+      "status": "PASS"
+    },
+    {
+      "name": "cleanup failure preserves guard for retry",
+      "status": "PASS"
+    },
+    {
+      "name": "different pending attempt never deleted",
+      "status": "PASS"
+    },
+    {
+      "name": "read-only reconciliation never calls financial RPC",
+      "status": "PASS"
+    }
+  ],
+  "classification": "Executed local TypeScript unit and async storage/concurrency tests with synthetic evidence. NOT actual hosted/database/browser runtime financial verification.",
+  "productionWrites": 0
+}

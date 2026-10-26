@@ -1,0 +1,36 @@
+{
+  "status": "PASS",
+  "nonPOSFilesCompared": 823,
+  "nonPOSDifferences": [],
+  "files": [
+    {
+      "path": "app/(tabs)/sales/checkout.tsx",
+      "beforeSha256": "cbc0e44bca41983b46b155df8dd0ba1a1f4f3949de70bb2d0738fff2064f5fd2",
+      "afterSha256": "c8617e7f6110ae597f3cdba23f5c9779c89a0c7ac1ff4830a78a2fd5adf45627",
+      "bytes": 107236
+    },
+    {
+      "path": "src/pos/saleAttempt.ts",
+      "beforeSha256": "fce0a31b71a7ac54a4cd6fde5b70d8ff08f5cf6014647936e5f4f3cbfe2479dc",
+      "afterSha256": "06615e47d7641289aae9d1ac4837ca68e5ba64553aa001ec350a1143ba484332",
+      "bytes": 1111
+    },
+    {
+      "path": "src/offline/salesQueue.ts",
+      "beforeSha256": "28e91ea45411b8c00352262980473a0844b36a6538b2ebc0dd72b9662c4d27e8",
+      "afterSha256": "15c80ec2e27ff243270f65f72afbca16e48a9a2f45dbb05a8aa4afde5fa37ad8",
+      "bytes": 9231
+    },
+    {
+      "path": "src/pos/saleRecovery.ts",
+      "beforeSha256": null,
+      "afterSha256": "3e22db71d492b22ed5b61599259b7f3a0924019daa19f55ff4dca19ac91935cb",
+      "bytes": 3785
+    }
+  ],
+  "gitBranch": "main",
+  "gitHead": "2b43fdf9c5a5b605b9647bb52525ad2ccd1577e8",
+  "staged": false,
+  "pushed": false,
+  "committed": false
+}

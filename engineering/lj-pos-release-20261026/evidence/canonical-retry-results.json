@@ -1,0 +1,8 @@
+{
+  "status": "PASS",
+  "environment": "Actual existing canonical create_sale_with_payment_v6 on isolated PostgreSQL synthetic fixture; transaction rolled back",
+  "repeatedIdenticalClientID": "same sale ID; exactly one sale",
+  "inventoryDelta": 1.0,
+  "originalResponseLost": "simulated discard of first result; second canonical call executed genuinely",
+  "productionAccess": false
+}

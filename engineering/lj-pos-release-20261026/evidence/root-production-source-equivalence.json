@@ -1,0 +1,13 @@
+{
+  "status": "PASS",
+  "activeDeployment": "6adf3191a53a8fa940120a8b",
+  "entries": [
+    {
+      "file": "entry-aa1a220f83fc2bc3af12bd18d1127562.js",
+      "sha256": "a76c5e0ff73387d0180a3748fe88fb1e0c786c97b1f721f4da199ec475895faf",
+      "matchesActiveProduction": true
+    }
+  ],
+  "method": "Exact root-path rebuild using preserved pre-POS source bytes; all three working source files restored in finally after byte-ownership checks. No code reconstruction or normalization.",
+  "productionWrites": 0
+}

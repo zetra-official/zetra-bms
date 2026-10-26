@@ -1,0 +1,10 @@
+{
+  "status": "PASS",
+  "deployment": "6adf3191a53a8fa940120a8b",
+  "files": 547,
+  "allProviderSHA1Verified": true,
+  "exactOriginalBytes": true,
+  "protectedConfiguration": "Recovered through official authenticated Netlify Download deployed files; SHA1 exact match",
+  "officialArchiveSha256": "a2a25d78639e1fee415f1989e51fa68f6308f3355f98b64454875892118f147a",
+  "productionWrites": 0
+}

@@ -1,0 +1,17 @@
+{
+  "status": "PASS",
+  "actualLocalPostgres": true,
+  "tablesUnchanged": [
+    "sales",
+    "sale_items",
+    "sale_payments",
+    "inventory",
+    "stock_movements",
+    "credit_ledger_v2",
+    "credit_accounts_v2",
+    "field_wallets",
+    "field_wallet_transactions"
+  ],
+  "scope": "Before/after actual browser recovery; all financial table hashes unchanged",
+  "productionAccess": false
+}

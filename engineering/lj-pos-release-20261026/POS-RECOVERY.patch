@@ -1,0 +1,193 @@
+--- a/app/(tabs)/sales/checkout.tsx
++++ b/app/(tabs)/sales/checkout.tsx
+@@ -1,6 +1,7 @@
+ import {withCheckoutDeadline,permitsPriceAdjustment} from '../../../src/pos/checkoutAvailability';
++import {exactAmount,assessSaleRecovery,persistSaleAttempt,releaseVerifiedAttempt} from '../../../src/pos/saleRecovery';
+ import {saleAttemptKey,parseSaleAttempt,blocksSale,definitiveSaleRejection,type SaleAttempt} from '../../../src/pos/saleAttempt';
+-import {parseCheckoutCart,scopedCartKey,readCart,writeCart} from '../../../src/pos/cartLifecycle';
++import {parseCheckoutCart,scopedCartKey,readCart,writeCart,consumeUnchangedCart} from '../../../src/pos/cartLifecycle';
+ import {posStabilityText} from '../../../src/i18n/posStability';
+ import {getExtraPerQty,getAdjustedUnitPrice,getAdjustedLineTotal,parseAdjustment,applyItemAdjustment,plainPriceAmount} from '../../../src/pos/itemAdjustment';
+ import {priceAdjustmentText} from '../../../src/i18n/priceAdjustment';
+@@ -29,7 +30,7 @@
+ import AsyncStorage from "@react-native-async-storage/async-storage";
+ 
+ import { useOrg } from "../../../src/context/OrgContext";
+-import { enqueueSale, makeId } from "../../../src/offline/salesQueue";
++import { enqueueSale, makeId, getQueuedSaleByClientId, settleVerifiedQueuedSale } from "../../../src/offline/salesQueue";
+ import { SubmissionGate } from "../../../src/offline/submissionGate";
+ import { supabase } from "../../../src/supabase/supabaseClient";
+ import { Button } from "../../../src/ui/Button";
+@@ -612,65 +613,51 @@
+   },[orgId,storeId,cartActor,saleIntent,conversionId,cashierMode,reservationMode]);
+   const rememberAttempt=useCallback(async(attempt:SaleAttempt)=>{
+     if(!orgId||!cartActor||!storeId)throw Error('CART_SCOPE_REQUIRED');
+-    await AsyncStorage.setItem(saleAttemptKey({organizationId:orgId,storeId,actorId:cartActor}),JSON.stringify(attempt));
++    await persistSaleAttempt(AsyncStorage,{organizationId:orgId,storeId,actorId:cartActor},attempt);
+     setAttemptRecovery(attempt);
+   },[orgId,storeId,cartActor]);
++  const recoveryBusy=useRef(false);
++  const activeRecoveryScope=useRef('');
++  activeRecoveryScope.current=orgId&&storeId&&cartActor?scopedCartKey({organizationId:orgId,storeId,actorId:cartActor}):'';
+   const reviewSale=useCallback(async()=>{
+-    if(!attemptRecovery||!orgId||!storeId||!cartActor)return;
+-
+-    const {data,error}=await supabase.from('sales')
+-      .select('id')
+-      .eq('store_id',storeId)
+-      .eq('client_sale_id',attemptRecovery.id)
+-      .maybeSingle();
+-
+-    if(error||!data?.id){
+-      const message=posStabilityText(conversionLanguage,'unresolved');
+-      if(Platform.OS==='web'){
+-        setWebBanner({type:'error',text:message});
+-      }else{
+-        Alert.alert(uiText('Blocked'),message);
++    if(!attemptRecovery||!orgId||!storeId||!cartActor||recoveryBusy.current||saving)return;
++    recoveryBusy.current=true;
++    const scope={organizationId:orgId,storeId,actorId:cartActor},scopeKey=scopedCartKey(scope),attempt=attemptRecovery;
++    try{
++      const {data,error}=await withCheckoutDeadline(supabase.from('sales')
++        .select('id,organization_id,store_id,client_sale_id,status,total_amount,balance_amount,payment_method,customer_id')
++        .eq('organization_id',orgId).eq('store_id',storeId).eq('client_sale_id',attempt.id).maybeSingle(),
++        posStabilityText(conversionLanguage,'unresolved'));
++      if(error||!data)throw Error('SALE_UNVERIFIED');
++      const queued=await getQueuedSaleByClientId(storeId,attempt.id);
++      if(queued?.status==='SENDING')throw Error('QUEUE_IN_PROGRESS');
++      // Legacy offline markers did not encode separate credit follow-ups.
++      const evidenceAttempt:SaleAttempt=queued?.payload.is_credit&&queued.payload.credit_balance>0
++        ?{...attempt,phase:'BASE_COMMITTED',requiresFollowUp:true,followUp:{customer:attempt.followUp?.customer??false,creditAmount:String(queued.payload.credit_balance)}}:attempt;
++      let credits:any[]=[];
++      if(evidenceAttempt.requiresFollowUp&&evidenceAttempt.phase!=='COMPLETE'&&(evidenceAttempt.followUp?evidenceAttempt.followUp.creditAmount!==null:exactAmount(data.balance_amount)!=='0')){
++        const credit=await withCheckoutDeadline(supabase.from('credit_ledger_v2')
++          .select('store_id,reference,entry_type,delta').eq('store_id',storeId)
++          .eq('reference',String(data.id)).eq('entry_type','SALE'),posStabilityText(conversionLanguage,'unresolved'));
++        if(credit.error)throw credit.error;
++        credits=credit.data??[];
+       }
+-      return;
+-    }
+-
+-    const followUpPending=
+-      attemptRecovery.requiresFollowUp &&
+-      attemptRecovery.phase!=='COMPLETE';
+-
+-    if(followUpPending){
+-      router.push({
+-        pathname:'/sales/receipt',
+-        params:{saleId:String(data.id)}
+-      } as any);
+-      return;
+-    }
+-
+-    if(attemptRecovery.intent===saleIntent){
+-      await clearPersistedSalesCart();
+-      setCheckoutCart([]);
+-    }
+-
+-    await AsyncStorage.removeItem(
+-      saleAttemptKey({
+-        organizationId:orgId,
+-        storeId,
+-        actorId:cartActor
+-      })
+-    );
+-
+-    setAttemptRecovery(null);
+-    submission.current=new SubmissionGate();
+-
+-    router.replace({
+-      pathname:'/sales/receipt',
+-      params:{saleId:String(data.id)}
+-    } as any);
+-  },[
+-    attemptRecovery,orgId,storeId,cartActor,
+-    saleIntent,clearPersistedSalesCart,
+-    router,conversionLanguage,uiText
+-  ]);
++      const proof=assessSaleRecovery(evidenceAttempt,scope,data as any,credits);
++      if(!proof.verified||!proof.saleId||activeRecoveryScope.current!==scopeKey)throw Error('SALE_UNVERIFIED');
++      const released=await releaseVerifiedAttempt(AsyncStorage,scope,attempt,proof.saleId,async()=>{
++        if(activeRecoveryScope.current!==scopeKey)throw Error('SCOPE_CHANGED');
++        if(queued&&!await settleVerifiedQueuedSale(storeId,queued.id,attempt.id))throw Error('QUEUE_IN_PROGRESS');
++        if(attempt.intent===saleIntent){await consumeUnchangedCart(AsyncStorage,scopeKey,cartSignature,cartSignature(checkoutCart));if(activeRecoveryScope.current===scopeKey)setCheckoutCart([]);}
++      });
++      if(!released||activeRecoveryScope.current!==scopeKey)return;
++      setAttemptRecovery(null);submission.current=new SubmissionGate();
++      router.replace({pathname:'/sales/receipt',params:{saleId:proof.saleId}} as any);
++    }catch{
++      if(activeRecoveryScope.current===scopeKey)setWebBanner({type:'error',text:posStabilityText(conversionLanguage,'unresolved')});
++    }finally{recoveryBusy.current=false;}
++  },[attemptRecovery,orgId,storeId,cartActor,saving,saleIntent,checkoutCart,router,conversionLanguage]);
++  // Recheck on screen entry/return; never submit a sale or replay follow-ups.
++  useFocusEffect(useCallback(()=>{if(attemptReady&&attemptRecovery&&!saving)void reviewSale();},[attemptReady,attemptRecovery,saving,reviewSale]));
+ 
+   const [openCashierShiftId, setOpenCashierShiftId] = useState<string | null>(null);
+   const [webBanner, setWebBanner] = useState<{
+@@ -1542,7 +1529,7 @@
+         }
+       }
+ 
+-      const durableAttempt:SaleAttempt={id:clientSaleId,intent:saleIntent,phase:'DISPATCHED',requiresFollowUp:!!customerPhone.trim()||isCredit};
++      const durableAttempt:SaleAttempt={id:clientSaleId,intent:saleIntent,phase:'DISPATCHED',requiresFollowUp:!!customerPhone.trim()||isCredit,expectedTotal:String(grandTotal),followUp:{customer:!!customerPhone.trim(),creditAmount:isCredit&&balance>0?String(balance):null}};
+       await rememberAttempt(durableAttempt);
+       submission.current.dispatched();
+       const res = await withCheckoutDeadline(supabase.rpc("create_sale_with_payment_v6", {
+--- a/src/pos/saleAttempt.ts
++++ b/src/pos/saleAttempt.ts
+@@ -1,5 +1,5 @@
+ import {scopedCartKey,type CartScope} from './cartLifecycle';
+-export type SaleAttempt={id:string;intent:string;phase:'DISPATCHED'|'BASE_COMMITTED'|'COMPLETE'|'QUEUED';requiresFollowUp:boolean;saleId?:string};
++export type SaleAttempt={id:string;intent:string;phase:'DISPATCHED'|'BASE_COMMITTED'|'COMPLETE'|'QUEUED';requiresFollowUp:boolean;saleId?:string;expectedTotal?:string;followUp?:{customer:boolean;creditAmount:string|null}};
+ export const saleAttemptKey=(scope:CartScope)=>'pos_attempt_'+scopedCartKey(scope);
+ export function blocksSale(attempt:SaleAttempt|null,intent:string){return !!attempt&&(attempt.phase==='DISPATCHED'||attempt.phase==='BASE_COMMITTED'||attempt.intent===intent)}
+ export function parseSaleAttempt(raw:string|null):SaleAttempt|null{
+--- a/src/offline/salesQueue.ts
++++ b/src/offline/salesQueue.ts
+@@ -190,6 +190,13 @@
+   });
+ }
+ 
++/** Called only after read-only canonical sale/follow-up verification; never race an active sender. */
++export async function settleVerifiedQueuedSale(storeId:string,id:string,clientId:string){
++ return mutateQueue(storeId,q=>{const item=q.find(x=>x.id===id);if(!item)return {items:q,result:true};
++  if(item.store_id!==storeId||item.client_sale_id!==clientId||item.status==='SENDING')return {items:q,result:false};
++  return {items:q.filter(x=>x.id!==id),result:true};});
++}
++
+ // âœ… USED by history.tsx
+ export async function listPending(storeId: string): Promise<SaleQueueItem[]> {
+   const q = await listQueue(storeId);
+--- /dev/null
++++ b/src/pos/saleRecovery.ts
+@@ -0,0 +1,29 @@
++import {parseSaleAttempt,saleAttemptKey,type SaleAttempt} from './saleAttempt';
++import type {CartScope} from './cartLifecycle';
++type Sale={id:string;organization_id:string;store_id:string;client_sale_id:string;status:string;total_amount:unknown;balance_amount:unknown;payment_method?:string;customer_id?:string|null};
++type Credit={store_id:string;reference:string;entry_type:string;delta:unknown};
++export function exactAmount(v:unknown){const s=String(v??'');if(!/^\d+(\.\d+)?$/.test(s))return null;const [a,b='']=s.split('.');return a.replace(/^0+(?=\d)/,'')+(b.replace(/0+$/,'')?'.'+b.replace(/0+$/,''):'');}
++/** Read evidence only. A missing row is UNKNOWN, never proof of non-commit. PARTIAL is not an error. */
++export function assessSaleRecovery(a:SaleAttempt,scope:CartScope,s:Sale|null,credits:readonly Credit[]=[]){
++ if(!s||s.store_id!==scope.storeId||s.organization_id!==scope.organizationId||s.client_sale_id!==a.id||(a.saleId&&a.saleId!==s.id)||s.status!=='COMPLETED')return {verified:false,reason:'SALE_UNVERIFIED'};
++ if(a.expectedTotal!==undefined&&(exactAmount(a.expectedTotal)===null||exactAmount(a.expectedTotal)!==exactAmount(s.total_amount)))return {verified:false,reason:'TOTAL_MISMATCH'};
++ if(a.requiresFollowUp&&a.phase!=='COMPLETE'){
++  if((a.followUp?.customer??true)&&!s.customer_id)return {verified:false,reason:'CUSTOMER_UNVERIFIED'};
++  const amount=a.followUp?a.followUp.creditAmount:exactAmount(s.balance_amount);
++  if(amount===null&&!a.followUp)return {verified:false,reason:'FOLLOW_UP_UNVERIFIED'};
++  // A legacy marker did not record original credit intent. Current zero balance alone is insufficient.
++  if(!a.followUp&&exactAmount(amount)==='0'&&!['CASH','MOBILE','BANK'].includes(s.payment_method??''))return {verified:false,reason:'ORIGINAL_CREDIT_UNVERIFIED'};
++  if(amount!==null&&exactAmount(amount)!=='0'){
++   const required=exactAmount(amount);if(required===null)return {verified:false,reason:'CREDIT_UNVERIFIED'};
++   const rows=credits.filter(x=>x.store_id===scope.storeId&&x.reference===s.id&&x.entry_type==='SALE');
++   if(rows.length!==1||exactAmount(rows[0].delta)!==required)return {verified:false,reason:'CREDIT_UNVERIFIED'};
++  }
++ }
++ return {verified:true,reason:'COMMITTED_EVIDENCE_VERIFIED',saleId:s.id};
++}
++type Storage={getItem(k:string):Promise<string|null>;setItem(k:string,v:string):Promise<void>;removeItem(k:string):Promise<void>};
++const tails=new Map<string,Promise<unknown>>();
++function locked<T>(key:string,task:()=>Promise<T>):Promise<T>{const previous=tails.get(key)??Promise.resolve();const run=previous.catch(()=>{}).then(async():Promise<T>=>{const locks=typeof navigator!=='undefined'?navigator.locks:undefined;return locks?await locks.request(key,task):await task()});tails.set(key,run);void run.finally(()=>{if(tails.get(key)===run)tails.delete(key)}).catch(()=>{});return run;}
++export function persistSaleAttempt(storage:Storage,scope:CartScope,a:SaleAttempt){return locked(saleAttemptKey(scope),()=>storage.setItem(saleAttemptKey(scope),JSON.stringify(a)));}
++/** Archive before removal; compare identity again after every awaited cleanup. Never erase another attempt. */
++export function releaseVerifiedAttempt(storage:Storage,scope:CartScope,a:SaleAttempt,saleId:string,cleanup:()=>Promise<void>){const key=saleAttemptKey(scope);return locked(key,async()=>{const raw=await storage.getItem(key);if(!raw||JSON.stringify(parseSaleAttempt(raw))!==JSON.stringify(a))return false;await storage.setItem(key+':verified:'+a.id,JSON.stringify({attempt:a,saleId,resolution:'COMMITTED_EVIDENCE_VERIFIED',nonIdempotentFollowUpsReplayed:false}));if(await storage.getItem(key)!==raw)return false;await cleanup();if(await storage.getItem(key)!==raw)return false;await storage.removeItem(key);return true;});}

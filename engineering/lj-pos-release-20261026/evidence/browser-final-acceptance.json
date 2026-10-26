@@ -1,0 +1,46 @@
+{
+  "status": "PASS",
+  "environment": "Actual Desktop Chromium production-built local app with synthetic Auth/REST adapter backed by canonical disposable PostgreSQL; hosted RLS verified separately via genuine Owner session",
+  "cases": [
+    {
+      "name": "Legacy BASE_COMMITTED + requiresFollowUp completed CASH sale",
+      "status": "PASS",
+      "result": "Archived and guard released; receipt rendered; no follow-up replay"
+    },
+    {
+      "name": "Unknown client sale ID",
+      "status": "PASS",
+      "result": "Guard retained"
+    },
+    {
+      "name": "Browser refresh with unknown attempt",
+      "status": "PASS",
+      "result": "Guard retained"
+    },
+    {
+      "name": "Tab close and reopen with unknown attempt",
+      "status": "PASS",
+      "result": "Persisted guard retained"
+    },
+    {
+      "name": "Same account isolated browser origins",
+      "status": "PASS",
+      "result": "Origin with attempt blocked; fresh origin Confirm Sale enabled. Device separation simulation, not a physical second-device execution."
+    },
+    {
+      "name": "503 lookup then restored connection",
+      "status": "PASS",
+      "result": "No unlock on failure; Refresh reconciles same ID after read availability returns"
+    },
+    {
+      "name": "Full browser-process restart",
+      "status": "NOT TESTED"
+    },
+    {
+      "name": "Physical Android/Expo/iPhone",
+      "status": "NOT TESTED"
+    }
+  ],
+  "customerBrowserState": "NOT directly accessible; actual stranded client ID/state remains unknown",
+  "productionWrites": 0
+}

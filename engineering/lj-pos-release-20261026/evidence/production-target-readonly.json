@@ -1,0 +1,15 @@
+{
+  "siteId": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+  "customDomain": "app.zetra.tz",
+  "siteName": "regal-sunburst-e3cee8",
+  "productionBranch": null,
+  "provider": null,
+  "repository": null,
+  "buildCommand": null,
+  "publishDirectory": null,
+  "activeDeployment": "6adf3191a53a8fa940120a8b",
+  "state": "ready",
+  "deploymentCommit": null,
+  "readOnly": true,
+  "productionWrites": 0
+}
