@@ -1,0 +1,16 @@
+{
+  "newNativeDependencies": false,
+  "packageJsonMatchesPreservedBaseline": true,
+  "runtimePolicy": {
+    "policy": "appVersion"
+  },
+  "appVersion": "1.0.0",
+  "easProjectId": "a8536709-2bea-40f4-8dd7-01563bd08c70",
+  "androidPackage": "com.anonymous.zetrabmsclean",
+  "nativeRebuildRequiredByCorrection": false,
+  "databaseMigrationRequired": false,
+  "backendFunctionDeploymentRequired": false,
+  "existingContractRequired": "m3_staff_operational_v1 with existing authenticated permissions",
+  "webProxyPublicationRequired": true,
+  "physicalAndroidCandidateTested": false
+}

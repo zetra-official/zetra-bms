@@ -1,0 +1,3 @@
+correction-source/** -text
+*.json -text
+*.patch -text

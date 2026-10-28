@@ -1,0 +1,217 @@
+--- before/src/services/referenceFx.ts
++++ after/src/services/referenceFx.ts
+@@ -2,7 +2,7 @@
+ // Reference/display-only FX. No posting, historical revaluation or financial RPCs.
+ export const ECB_REFERENCE_URL='https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml';
+ export const ECB_HISTORY_URL='https://www.ecb.europa.eu/stats/eurofxref/eurofxref-hist-90d.xml';
+-export const BOT_REFERENCE_URL='https://bot.go.tz/ExchangeRate/excRates?lang=en';
++export const BOT_REFERENCE_URL='https://www.bot.go.tz/exchangerate/excrates?lang=en';
+ export type ReferenceRates={provider:'ECB_REFERENCE'|'BOT_REFERENCE';purpose:'DISPLAY_REFERENCE_ONLY';sourceUrl:string;referenceDate:string;retrievedAt:string;sourceSha256:string;rates:Readonly<Record<string,string>>;direction?:'BASE_PER_UNIT';referenceTimezone?:'Africa/Dar_es_Salaam'};
+ export type DisplayQuote={from:string;to:string;numerator:string;denominator:string;evidence:ReferenceRates;transactionAllowed:false};
+ const trustedSnapshots=new WeakSet<ReferenceRates>(),trustedQuotes=new WeakSet<DisplayQuote>();
+--- before/netlify.toml
++++ after/netlify.toml
+@@ -24,7 +24,7 @@
+ # Public official reference data only; no business data or credentials.
+ [[redirects]]
+   from = "/api/reference-fx/bot"
+-  to = "https://bot.go.tz/ExchangeRate/excRates?lang=en"
++  to = "https://www.bot.go.tz/exchangerate/excrates?lang=en"
+   status = 200
+   force = true
+ 
+--- before/public/_redirects
++++ after/public/_redirects
+@@ -2,6 +2,6 @@
+ https://regal-sunburst-e3cee8.netlify.app/* https://app.zetra.tz/:splat 302!
+ /verified.html /login 302!
+ /email-verified /login 302!
+-/api/reference-fx/bot https://bot.go.tz/ExchangeRate/excRates?lang=en 200!
++/api/reference-fx/bot https://www.bot.go.tz/exchangerate/excrates?lang=en 200!
+ /api/reference-fx/ecb https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml 200!
+ /* /index.html 200
+--- before/app/finance/live.tsx
++++ after/app/finance/live.tsx
+@@ -1,3 +1,4 @@
++import {loadStaffFinance} from '@/src/finance/staffReader';
+ import {usePreferredDisplayMoney} from '@/src/currency/PreferredDisplay';
+ import {LegacyTzsValuation} from '@/src/currency/LegacyTzsValuation';
+ import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+@@ -374,7 +375,7 @@
+ 
+   const storeOptions = useMemo(() => {
+     const rows = (org.stores ?? [])
+-      .filter((s: any) => String(s?.organization_id ?? "").trim() === orgId)
++      .filter((s: any) => String(s?.organization_id ?? "").trim() === orgId && s?.is_allowed !== false)
+       .map((s: any) => ({
+         storeId: String(s?.store_id ?? "").trim(),
+         storeName: String(s?.store_name ?? s?.name ?? "Store").trim() || "Store",
+@@ -384,12 +385,12 @@
+     const uniq = new Map<string, string>();
+     for (const row of rows) uniq.set(row.storeId, row.storeName);
+ 
+-    if (activeStoreId && !uniq.has(activeStoreId)) {
++    if (canAll && activeStoreId && !uniq.has(activeStoreId)) {
+       uniq.set(activeStoreId, activeStoreName);
+     }
+ 
+     return Array.from(uniq.entries()).map(([storeId, storeName]) => ({ storeId, storeName }));
+-  }, [org.stores, orgId, activeStoreId, activeStoreName]);
++  }, [org.stores, orgId, activeStoreId, activeStoreName, canAll]);
+ 
+   const visibleStoreIds = useMemo(() => {
+     if (scope === "STORE" || !canAll) {
+@@ -411,7 +412,7 @@
+   const [err, setErr] = useState<string | null>(null);
+   const [rows, setRows] = useState<StoreLiveRow[]>([]);const [valuationScope,setValuationScope]=useState("");
+ 
+- const preferredMoney=usePreferredDisplayMoney(orgId,valuationScope===JSON.stringify([orgId,scope,selectedStoreId])&&!loading&&!err);
++ const preferredMoney=usePreferredDisplayMoney(orgId,valuationScope===JSON.stringify([orgId,scope,selectedStoreId,roleLower])&&!loading&&!err);
+   const fmtMoney = useCallback(
+     (n: number) =>
+       preferredMoney(n, {
+@@ -625,12 +626,15 @@
+ 
+     setLoading(true);
+     setErr(null);
++    setRows([]);
++    setValuationScope("");
+ 
+     try {
+       const { fromISO, toISO, fromYMD, toYMD } = rangeToday();
+ 
+       const result = await Promise.all(
+         visibleStoreIds.map(async (sid) => {
++          if (roleLower === "staff") return loadStaffFinance(supabase, orgId, sid, storeNameById.get(sid) ?? "Store");
+           const [sales, expenses, profit, pay, collections, expCh, stockValue] =
+             await Promise.all([
+               callSalesForStore(sid, fromISO, toISO),
+@@ -639,7 +643,7 @@
+               callPaymentBreakdown(sid, fromISO, toISO),
+               callCollections(sid, fromISO, toISO),
+               callExpenseBreakdown(sid, fromYMD, toYMD),
+-              callStockValue(sid),
++              isOwner ? callStockValue(sid) : Promise.resolve(NaN),
+             ]);
+ 
+           const availableCashNum = subtractFloor(pay.cash + collections.cash, expCh.cash);
+@@ -662,7 +666,7 @@
+ 
+       if (rid !== reqRef.current) return;
+ 
+-      setRows(result);setValuationScope(JSON.stringify([orgId,scope,selectedStoreId]));
++      setRows(result);setValuationScope(JSON.stringify([orgId,scope,selectedStoreId,roleLower]));
+     } catch (e: any) {
+       if (rid !== reqRef.current) return;
+       setErr(e?.message ?? "Failed to load live finance");
+@@ -682,11 +686,15 @@
+     callStockValue,
+     storeNameById,
+     isOwner,
++    roleLower,
++    scope,
++    selectedStoreId,
+   ]);
+ 
+   useFocusEffect(
+     useCallback(() => {
+       void load();
++      return () => { reqRef.current++; };
+     }, [load])
+   );
+ 
+@@ -694,17 +702,18 @@
+     void load();
+   }, true, AUTO_REFRESH_MS);
+ 
++  const scopeReady = !org.loading && valuationScope === JSON.stringify([orgId,scope,selectedStoreId,roleLower]);
+   const sortedRows = useMemo(() => {
+-    return [...rows].sort((a, b) => getRowScore(b) - getRowScore(a));
+-  }, [rows]);
++    return scopeReady ? [...rows].sort((a, b) => getRowScore(b) - getRowScore(a)) : [];
++  }, [rows, scopeReady]);
+ 
+   const topPerformerStoreId = useMemo(() => {
+     return sortedRows.length ? sortedRows[0].storeId : null;
+   }, [sortedRows]);
+ 
+-  const overviewAvailable = !loading && !err && rows.length > 0;
++  const overviewAvailable = scopeReady && !loading && !err && rows.length > 0;
+   const totals = useMemo(() => {
+-    return rows.reduce(
++    return sortedRows.reduce(
+       (acc, row) => {
+         acc.sales += toNum(row.sales);
+         acc.expenses += toNum(row.expenses);
+@@ -723,7 +732,7 @@
+         stockValue: 0,
+       }
+     );
+-  }, [rows]);
++  }, [sortedRows]);
+ 
+   const currentStoreLabel =
+     scope === "STORE"
+@@ -731,7 +740,7 @@
+       : `All Stores (${storeOptions.length})`;
+ 
+   if (isMobileWeb) {
+-    return <Screen>{overviewAvailable && valuationScope===JSON.stringify([orgId,scope,selectedStoreId]) && <LegacyTzsValuation organizationId={orgId} period="Today" rows={[{label:"Sales",amount:totals.sales},{label:"Expenses",amount:totals.expenses,ownerOnly:true},{label:"Stock Value",amount:totals.stockValue,ownerOnly:true},{label:"Profit",amount:totals.profit,ownerOnly:true}]}/>}<MobileFinance
++    return <Screen>{overviewAvailable && valuationScope===JSON.stringify([orgId,scope,selectedStoreId,roleLower]) && <LegacyTzsValuation organizationId={orgId} period="Today" rows={[{label:"Sales",amount:totals.sales},{label:"Expenses",amount:totals.expenses,ownerOnly:true},{label:"Stock Value",amount:totals.stockValue,ownerOnly:true},{label:"Profit",amount:totals.profit,ownerOnly:true}]}/>}<MobileFinance
+       text={uiText} orgName={orgName} scope={scope} canAll={canAll} isOwner={isOwner}
+       storeOptions={storeOptions} selectedStoreId={selectedStoreId}
+       onScope={setScope} onStore={setSelectedStoreId}
+@@ -762,7 +771,7 @@
+           alignSelf: "center",
+         }}
+       >
+-{overviewAvailable && valuationScope===JSON.stringify([orgId,scope,selectedStoreId]) && <LegacyTzsValuation organizationId={orgId} period="Today" rows={[{label:"Sales",amount:totals.sales},{label:"Expenses",amount:totals.expenses,ownerOnly:true},{label:"Stock Value",amount:totals.stockValue,ownerOnly:true},{label:"Profit",amount:totals.profit,ownerOnly:true}]}/>}
++{overviewAvailable && valuationScope===JSON.stringify([orgId,scope,selectedStoreId,roleLower]) && <LegacyTzsValuation organizationId={orgId} period="Today" rows={[{label:"Sales",amount:totals.sales},{label:"Expenses",amount:totals.expenses,ownerOnly:true},{label:"Stock Value",amount:totals.stockValue,ownerOnly:true},{label:"Profit",amount:totals.profit,ownerOnly:true}]}/>}
+         <View
+           style={{
+             flexDirection: "row",
+@@ -929,7 +938,7 @@
+             </View>
+ 
+             <View style={{ width: isMobileWeb ? "100%" : overviewColumns === 3 ? "31.8%" : "48.2%" }}>
+-              <MiniStat label={uiText("Stock Value")} value={overviewAvailable ? fmtMoney(totals.stockValue) : "—"} />
++              <MiniStat label={uiText("Stock Value")} value={overviewAvailable && isOwner ? fmtMoney(totals.stockValue) : "—"} />
+             </View>
+ 
+             <View style={{ width: isMobileWeb ? "100%" : overviewColumns === 3 ? "31.8%" : "48.2%" }}>
+@@ -1093,7 +1102,7 @@
+                   <View style={{ minWidth: rowMetricMinWidth, flexGrow: isDesktopWeb ? 1 : 0 }}>
+                     <MetricPill
+                       label={uiText("Stock Value")}
+-                      value={fmtMoney(row.stockValue)}
++                      value={isOwner ? fmtMoney(row.stockValue) : "—"}
+                       tone="neutral"
+                     />
+                   </View>
+--- before/src/finance/MobileFinance.tsx
++++ after/src/finance/MobileFinance.tsx
+@@ -41,7 +41,7 @@
+     { key: "moneyIn", label: t("Money In"), value: amount(totals.moneyIn), icon: "wallet-outline" },
+     { key: "expenses", label: t("Expenses"), value: amount(totals.expenses), icon: "receipt-outline", tone: "rose" },
+     { key: "orders", label: t("Orders"), value: available ? String(totals.orders) : "—", icon: "document-text-outline", tone: "blue" },
+-    { key: "stockValue", label: t("Stock Value"), value: amount(totals.stockValue), icon: "cube-outline", tone: "gold" },
++    { key: "stockValue", label: t("Stock Value"), value: isOwner ? amount(totals.stockValue) : "—", icon: "cube-outline", tone: "gold" },
+     { key: "profit", label: t("Profit"), value: isOwner ? amount(totals.profit) : "—", icon: "bar-chart-outline", hint: t(isOwner ? "owner-only" : "owner only") },
+   ];
+   const storeMetrics = (row: Row) => <View style={s.storeMetrics}>
+--- before/src/finance/staffReader.ts
++++ after/src/finance/staffReader.ts
+@@ -0,0 +1,13 @@
++import {connectionDeadline} from '../supabase/sessionRecovery';
++import {readSummary} from '../staff/model';
++type Port={auth:{getUser:()=>PromiseLike<{data:{user:{id:string}|null};error:unknown}>};rpc:(name:string,args:Record<string,unknown>)=>PromiseLike<{data:unknown;error:unknown}>};
++/** Existing server projection selects auth.uid() and enforces assigned-store access.
++ * Never substitute store-wide readers when personal attribution is unavailable. */
++export async function loadStaffFinance(port:Port,organization:string,store:string,storeName:string){
++ const user=await connectionDeadline(port.auth.getUser(),10000);if(user.error||!user.data.user)throw Error('AUTH_REQUIRED');
++ const reply=await connectionDeadline(port.rpc('m3_staff_operational_v1',{p_org_id:organization,p_store_id:store,p_day:null,p_offset:0}),12000);
++ if(reply.error)throw reply.error;
++ const own=readSummary(reply.data,{actor:user.data.user.id,organization,store});
++ if(own.sales===null||own.money_in===null||own.expenses===null||own.orders===null)throw Error('DASHBOARD_ATTRIBUTION_UNAVAILABLE');
++ return {storeId:store,storeName,sales:Number(own.sales),moneyIn:Number(own.money_in),expenses:Number(own.expenses),orders:own.orders,stockValue:NaN,profit:null};
++}

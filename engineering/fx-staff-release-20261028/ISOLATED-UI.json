@@ -1,0 +1,10 @@
+[
+  {
+    "file": "app/finance/live.tsx",
+    "stylesNavigationAndElementOrder": "PASS"
+  },
+  {
+    "file": "src/finance/MobileFinance.tsx",
+    "stylesNavigationAndElementOrder": "PASS"
+  }
+]

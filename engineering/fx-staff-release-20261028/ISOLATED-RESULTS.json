@@ -1,0 +1,82 @@
+{
+  "status": "PASS",
+  "checks": [
+    {
+      "name": "Owner TZS independent of rates",
+      "status": "PASS"
+    },
+    {
+      "name": "live BoT parsed conversion USD",
+      "status": "PASS"
+    },
+    {
+      "name": "live BoT parsed conversion KES",
+      "status": "PASS"
+    },
+    {
+      "name": "live BoT parsed conversion UGX",
+      "status": "PASS"
+    },
+    {
+      "name": "live BoT parsed conversion EUR",
+      "status": "PASS"
+    },
+    {
+      "name": "exact fixture TZS 250000 / 2500 = USD 100",
+      "status": "PASS"
+    },
+    {
+      "name": "live ECB other-pair conversion",
+      "status": "PASS"
+    },
+    {
+      "name": "original immutable",
+      "status": "PASS"
+    },
+    {
+      "name": "wrong organization rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "missing stale retrieval and reference blocked",
+      "status": "PASS"
+    },
+    {
+      "name": "Staff personal reader only and confidentiality",
+      "status": "PASS"
+    },
+    {
+      "name": "Staff TZS and verified USD",
+      "status": "PASS"
+    },
+    {
+      "name": "reject mismatched actor_id",
+      "status": "PASS"
+    },
+    {
+      "name": "reject mismatched organization_id",
+      "status": "PASS"
+    },
+    {
+      "name": "reject mismatched store_id",
+      "status": "PASS"
+    },
+    {
+      "name": "no fallback on denied RPC",
+      "status": "PASS"
+    },
+    {
+      "name": "unattributed amounts fail closed",
+      "status": "PASS"
+    }
+  ],
+  "liveReference": {
+    "source": "https://www.bot.go.tz/exchangerate/excrates?lang=en",
+    "referenceDate": "2026-10-28",
+    "retrievedAt": "2026-10-28T10:02:37.453Z",
+    "sha256": "c788e1a0f84f29fdfff92aedc7377685fac80c8c66090918cbb024e07d41d8f1",
+    "usd": "94.73"
+  },
+  "scope": "Executed TypeScript functions; Staff server mocked, no hosted RLS or device runtime claimed",
+  "productionWrites": false
+}

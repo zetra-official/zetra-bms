@@ -1,0 +1,62 @@
+[build]
+  command = "npm run release:web"
+  publish = "dist/unified-web"
+
+# Keep legacy verification callbacks on the current application.
+[[redirects]]
+  from = "https://regal-sunburst-e3cee8.netlify.app/*"
+  to = "https://app.zetra.tz/:splat"
+  status = 302
+  force = true
+
+[[redirects]]
+  from = "/verified.html"
+  to = "/login"
+  status = 302
+  force = true
+
+[[redirects]]
+  from = "/email-verified"
+  to = "/login"
+  status = 302
+  force = true
+
+# Public official reference data only; no business data or credentials.
+[[redirects]]
+  from = "/api/reference-fx/bot"
+  to = "https://www.bot.go.tz/exchangerate/excrates?lang=en"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/reference-fx/ecb"
+  to = "https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Content-hashed Expo assets can be reused safely; HTML must revalidate releases.
+[[headers]]
+  for = "/_expo/static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+[[headers]]
+  for = "/"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+[[headers]]
+  for = "/login"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"

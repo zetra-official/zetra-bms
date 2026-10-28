@@ -1,0 +1,35 @@
+{
+  "selected": [
+    {
+      "file": "app/(tabs)/sales/checkout.tsx",
+      "sourceSha256": "c16c3487355b2ef5f959ed5f9f5a43aa2226fff744b8f55ac1bca69936411a0f",
+      "basis": "Exact active compiled function-body match in current-source acceptance artifact; full integrated dependency comparison required before release"
+    },
+    {
+      "file": "src/pos/saleAttempt.ts",
+      "sourceSha256": "5bc986d9a758aa55b504bc2d7180957a33e081192e84b654f3ae26d32d4159ac",
+      "basis": "Exact active compiled function-body match in current-source acceptance artifact; full integrated dependency comparison required before release"
+    },
+    {
+      "file": "app/office/growth-partners.tsx",
+      "sourceSha256": "96e140ac675a15249f016398d018fd2e42d8433c7d69fd6d4fa14fa72c84070e",
+      "basis": "Exact active compiled function-body match in current-source acceptance artifact; full integrated dependency comparison required before release"
+    },
+    {
+      "file": "app/stocks/inbound.tsx",
+      "sourceSha256": "c5f8c366f33244eb254c59f93e925747177b07398d50fe91b1bd1668341ca40a",
+      "basis": "Exact active compiled function-body match in current-source acceptance artifact; full integrated dependency comparison required before release"
+    },
+    {
+      "file": "src/incoming/BulkScreen.tsx",
+      "sourceSha256": "6b820f99f61556d2ac71102fcb645c1d99488c8cb2bb3db460da0d6a9ea2e098",
+      "basis": "Exact active compiled function-body match in current-source acceptance artifact; full integrated dependency comparison required before release"
+    }
+  ],
+  "retainedCandidate": [
+    "app/partner/index.tsx",
+    "src/i18n/commonMessages.ts"
+  ],
+  "status": "PASS",
+  "evidence": "INTEGRATED-GRAPH.json: full module/dependency mapping against active Production, with only approved FX/Finance executable changes"
+}

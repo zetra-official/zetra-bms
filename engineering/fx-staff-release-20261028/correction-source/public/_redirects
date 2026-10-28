@@ -1,0 +1,7 @@
+# Canonical alias redirect precedes the SPA rewrite. Query parameters are retained.
+https://regal-sunburst-e3cee8.netlify.app/* https://app.zetra.tz/:splat 302!
+/verified.html /login 302!
+/email-verified /login 302!
+/api/reference-fx/bot https://www.bot.go.tz/exchangerate/excrates?lang=en 200!
+/api/reference-fx/ecb https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml 200!
+/* /index.html 200
